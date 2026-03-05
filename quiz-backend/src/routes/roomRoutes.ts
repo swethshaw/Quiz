@@ -1,0 +1,127 @@
+import express, { Request, Response, Router } from 'express';
+import Room from '../models/Room';
+
+const router: Router = express.Router();
+
+router.post('/create', async (req: Request, res: Response) => {
+  try {
+    const { hostId, topicId, questions } = req.body;
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    const newRoom = await Room.create({ code, hostId, topicId, questions, participants: [] });
+    res.json({ success: true, data: newRoom });
+  } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+router.get('/active', async (req: Request, res: Response) => {
+  try {
+    const activeRooms = await Room.find({ status: 'waiting' }).populate('hostId', 'name avatarColor').populate('topicId', 'title').sort({ createdAt: -1 });
+    res.json({ success: true, data: activeRooms });
+  } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
+});
+router.post('/join/:code', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId, name } = req.body;
+    const room = await Room.findOne({ code: (req.params.code as string).toUpperCase() }).populate('topicId', 'title');
+
+    if (!room) { 
+      res.status(404).json({ success: false, message: 'Room not found. Check your code.' }); 
+      return; 
+    }
+    
+    const exists = room.participants.find(p => p.userId.toString() === userId);
+    if (!exists && room.status !== 'waiting') {
+      res.status(400).json({ success: false, message: 'This room is closed. The quiz has already started.' });
+      return;
+    }
+    if (!exists && room.status === 'waiting') {
+      room.participants.push({ 
+        userId, 
+        name, 
+        status: 'Joined', 
+        score: 0, 
+        timeSpentSeconds: 0,
+        warnings: 0 
+      });
+      await room.save();
+    }
+
+    res.json({ success: true, data: room });
+  } catch (error: any) { 
+    res.status(500).json({ success: false, error: error.message }); 
+  }
+});
+
+router.post('/host-action/:code', async (req: Request, res: Response) => {
+  try {
+    const { action, targetUserId } = req.body;
+    const room = await Room.findOne({ code: (req.params.code as string).toUpperCase() });
+    if (!room) throw new Error("Room not found");
+
+    if (action === 'start') room.status = 'playing';
+    if (action === 'kick') {
+      room.participants = room.participants.filter(p => p.userId.toString() !== targetUserId) as any;
+    }
+    if (action === 'block') {
+      const p = room.participants.find(p => p.userId.toString() === targetUserId);
+      if (p) p.status = 'Blocked';
+    }
+
+    await room.save();
+    res.json({ success: true, data: room });
+  } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+router.post('/submit/:code', async (req: Request, res: Response) => {
+  try {
+    const { userId, score, timeSpentSeconds } = req.body;
+    const room = await Room.findOne({ code: (req.params.code as string).toUpperCase() });
+    if (!room) throw new Error("Room not found");
+
+    const p = room.participants.find(p => p.userId.toString() === userId);
+    if (p) {
+      p.status = 'Submitted';
+      p.score = score;
+      p.timeSpentSeconds = timeSpentSeconds;
+    }
+
+    await room.save();
+    res.json({ success: true, data: room });
+  } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+router.get('/:code', async (req: Request, res: Response) => {
+  try {
+    const room = await Room.findOne({ code: (req.params.code as string).toUpperCase() });
+    if (!room) throw new Error("Room not found");
+    res.json({ success: true, data: room });
+  } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
+});
+
+router.get('/hosted/:userId', async (req: Request, res: Response) => {
+  try {
+    const rooms = await Room.find({ hostId: req.params.userId })
+      .populate('topicId', 'title')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: rooms });
+  } catch (error: any) { 
+    res.status(500).json({ success: false, error: error.message }); 
+  }
+});
+
+router.post('/warning/:code', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.body;
+    const room = await Room.findOne({ code: (req.params.code as string).toUpperCase() });
+    if (!room) throw new Error("Room not found");
+
+    const p = room.participants.find(p => p.userId.toString() === userId);
+    if (p) p.warnings = (p.warnings || 0) + 1;
+
+    await room.save();
+    res.json({ success: true });
+  } catch (error: any) { 
+    res.status(500).json({ success: false, error: error.message }); 
+  }
+});
+export default router;
