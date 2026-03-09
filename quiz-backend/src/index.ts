@@ -9,6 +9,7 @@ import helpRoutes from './routes/helpRoutes';
 import roomRoutes from './routes/roomRoutes';
 import paperRoutes from './routes/paperRoutes';
 import debugRoute from './routes/debugRoute';
+import notificationRoutes from './routes/notificationRoutes';
 
 dotenv.config();
 
@@ -20,7 +21,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req: Request, res: Response) => {
-  res.send('Quiz Backend is live (powered by TypeScript)!');
+  res.send('peer Backend is live (powered by TypeScript)!');
 });
 
 app.use('/api/quiz', quizRoutes);
@@ -29,6 +30,7 @@ app.use('/api/results', resultRoutes);
 app.use('/api/help', helpRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/papers', paperRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/debug', debugRoute);
 
 const PORT: number = parseInt(process.env.PORT as string, 10) || 5000;

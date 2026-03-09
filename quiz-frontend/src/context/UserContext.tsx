@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+// Setup environment variable (Adjust to process.env.REACT_APP_API_URL if using CRA)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export interface User {
   _id: string;
   name: string;
@@ -19,12 +22,14 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+
   useEffect(() => {
     const restoreSession = async () => {
       const storedUserId = localStorage.getItem('quiz_user_id');
       if (storedUserId) {
         try {
-          const res = await fetch(`http://localhost:5000/api/users/${storedUserId}`);
+          // Replaced hardcoded localhost with API_URL
+          const res = await fetch(`${API_URL}/api/users/${storedUserId}`);
           const data = await res.json();
           if (data.success) {
             setUser(data.data);

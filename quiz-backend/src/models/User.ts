@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IUser extends Document {
   name: string;
   email: string;
+  password?: string;
   avatarColor: string;
   role: 'student' | 'admin';
   createdAt: Date;
@@ -11,7 +12,8 @@ export interface IUser extends Document {
 const userSchema: Schema = new Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  avatarColor: { type: String, default: 'bg-blue-500' },
+  password: { type: String, required: true },
+  avatarColor: { type: String, default: 'bg-violet-500' }, // Updated to match the new UI
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
   createdAt: { type: Date, default: Date.now }
 });
