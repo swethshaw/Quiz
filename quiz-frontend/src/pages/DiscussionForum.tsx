@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MessageSquare, ThumbsUp, ArrowLeft, Send, Bug, 
-  Lightbulb, BookOpen, Search, UserCircle, Loader2, Clock 
+  Lightbulb, BookOpen, Search, UserCircle, Loader2
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
