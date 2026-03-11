@@ -15,7 +15,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function ProctorDashboardPage() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ export default function ProctorDashboardPage() {
     if (!user || !roomCode) return;
     const fetchLiveRoomData = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/rooms/${roomCode}`);
+        const res = await fetch(`${API_URL}/api/rooms/${roomCode}`);
         const data = await res.json();
 
         if (data.success) {
@@ -90,7 +90,7 @@ export default function ProctorDashboardPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/rooms/host-action/${roomCode}`,
+        `${API_URL}/api/rooms/host-action/${roomCode}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

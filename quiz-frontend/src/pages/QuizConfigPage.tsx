@@ -39,7 +39,7 @@ const QUESTION_TYPE_OPTIONS = [
   "Answered Correct",
   "Skipped",
 ];
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function QuizConfigPage() {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ export default function QuizConfigPage() {
     const fetchMyPapers = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/papers/user/${user._id}`,
+          `${API_URL}/api/papers/user/${user._id}`,
         );
         const data = await res.json();
         if (data.success) {
@@ -174,14 +174,14 @@ export default function QuizConfigPage() {
 
       if (questionSource === "previous") {
         const res = await fetch(
-          `http://localhost:5000/api/papers/${selectedPaperId}`,
+          `${API_URL}/api/papers/${selectedPaperId}`,
         );
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
         finalQuestions = data.data.questions;
       } else {
         const res = await fetch(
-          "http://localhost:5000/api/quiz/generate-quiz",
+          `${API_URL}/api/quiz/generate-quiz`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -207,7 +207,7 @@ export default function QuizConfigPage() {
       let roomCode = null;
 
       if (playMode === "multi") {
-        const roomRes = await fetch("http://localhost:5000/api/rooms/create", {
+        const roomRes = await fetch(`${API_URL}/api/rooms/create`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

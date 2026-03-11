@@ -5,8 +5,6 @@ import {
   Lightbulb, BookOpen, Search, UserCircle, Loader2, Clock 
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
-
-// Fixed: Removed double semicolon
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function DiscussionForum() {

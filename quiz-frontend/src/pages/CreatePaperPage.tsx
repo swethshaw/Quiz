@@ -15,7 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "../context/UserContext";
 import { useCohort } from "../context/CohortContext";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function CreatePaperPage() {
   const navigate = useNavigate();
   const { topicId } = useParams();
@@ -87,7 +87,7 @@ export default function CreatePaperPage() {
     setIsSaving(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/papers", {
+      const res = await fetch(`${API_URL}/api/papers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

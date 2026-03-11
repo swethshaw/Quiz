@@ -24,7 +24,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useCohort } from "../context/CohortContext";
 import { useUser } from "../context/UserContext";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function QuizLobbyPage() {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
@@ -85,21 +85,21 @@ export default function QuizLobbyPage() {
   useEffect(() => {
     const handleUnload = () => {
       if (role === "host" && activeRoomCode) {
-        navigator.sendBeacon(`http://localhost:5000/api/rooms/${activeRoomCode}/delete`);
+        navigator.sendBeacon(`${API_URL}/api/rooms/${activeRoomCode}/delete`);
       }
     };
     window.addEventListener("beforeunload", handleUnload);
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
       if (role === "host" && activeRoomCode && !isNavigatingToQuiz.current) {
-        fetch(`http://localhost:5000/api/rooms/${activeRoomCode}`, { method: "DELETE" }).catch(console.error);
+        fetch(`${API_URL}/api/rooms/${activeRoomCode}`, { method: "DELETE" }).catch(console.error);
       }
     };
   }, [role, activeRoomCode]);
 
   useEffect(() => {
     if (role === "participant" && activeRoomCode && user) {
-      fetch(`http://localhost:5000/api/rooms/join/${activeRoomCode}`, {
+      fetch(`${API_URL}/api/rooms/join/${activeRoomCode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user._id, name: user.name }),
@@ -110,13 +110,13 @@ export default function QuizLobbyPage() {
   useEffect(() => {
     if (role === "host" && activeRoomCode && user) {
       if (isHostTakingQuiz) {
-        fetch(`http://localhost:5000/api/rooms/join/${activeRoomCode}`, {
+        fetch(`${API_URL}/api/rooms/join/${activeRoomCode}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: user._id, name: user.name }),
         }).catch(console.error);
       } else {
-        fetch(`http://localhost:5000/api/rooms/host-action/${activeRoomCode}`, {
+        fetch(`${API_URL}/api/rooms/host-action/${activeRoomCode}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "kick", targetUserId: user._id }),
@@ -130,7 +130,7 @@ export default function QuizLobbyPage() {
 
     const pollRoom = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/rooms/${activeRoomCode}`);
+        const res = await fetch(`${API_URL}/api/rooms/${activeRoomCode}`);
         if (res.status === 404 || res.status === 410) {
           if (role === "participant" && lobbyStatus === "waiting") setHostLeft(true);
           return;
@@ -170,7 +170,7 @@ export default function QuizLobbyPage() {
   }, [isKicked, hostLeft, navigate]);
 
   const handleKickParticipant = async (targetUserId: string) => {
-    await fetch(`http://localhost:5000/api/rooms/host-action/${activeRoomCode}`, {
+    await fetch(`${API_URL}/api/rooms/host-action/${activeRoomCode}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "kick", targetUserId }),
@@ -190,7 +190,7 @@ export default function QuizLobbyPage() {
     if (hasMultipleDisplays) return;
     isNavigatingToQuiz.current = true; 
     
-    await fetch(`http://localhost:5000/api/rooms/host-action/${activeRoomCode}`, {
+    await fetch(`${API_URL}/api/rooms/host-action/${activeRoomCode}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "start" }),

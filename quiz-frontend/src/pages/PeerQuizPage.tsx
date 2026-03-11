@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCohort } from "../context/CohortContext";
 import { useUser } from "../context/UserContext";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function PeerQuizPage() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function PeerQuizPage() {
   useEffect(() => {
     const fetchActiveRooms = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/rooms/active");
+        const res = await fetch(`${API_URL}/api/rooms/active`);
         const data = await res.json();
         if (data.success) {
           setActiveInvites(data.data);
@@ -67,7 +68,7 @@ export default function PeerQuizPage() {
     setJoinError("");
 
     try {
-      const res = await fetch(`http://localhost:5000/api/rooms/join/${code.toUpperCase()}`, {
+      const res = await fetch(`${API_URL}/api/rooms/join/${code.toUpperCase()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user._id, name: user.name }),

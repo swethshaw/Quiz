@@ -12,7 +12,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "../context/UserContext";
 import { useCohort } from "../context/CohortContext";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function LeaderboardPage() {
   const { user } = useUser();
   const { activeCohort } = useCohort();
@@ -27,8 +27,8 @@ export default function LeaderboardPage() {
       setIsLoading(true);
       try {
         const endpoint = viewMode === "global" 
-          ? `http://localhost:5000/api/leaderboard/global`
-          : `http://localhost:5000/api/leaderboard/cohort/${encodeURIComponent(activeCohort)}`;
+          ? `${API_URL}/api/leaderboard/global`
+          : `${API_URL}/api/leaderboard/cohort/${encodeURIComponent(activeCohort)}`;
           
         const res = await fetch(endpoint);
         const data = await res.json();

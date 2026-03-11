@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useCohort } from "../context/CohortContext";
 import { useUser } from "../context/UserContext";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function Dashboard() {
   const navigate = useNavigate();
   const { activeCohort, cohortData, isLoading, refreshData } = useCohort();
@@ -31,7 +31,7 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
       // 1. Fetch Leaderboard
       try {
-        const leadRes = await fetch(`http://localhost:5000/api/leaderboard/cohort/${encodeURIComponent(activeCohort)}`);
+        const leadRes = await fetch(`${API_URL}/api/leaderboard/cohort/${encodeURIComponent(activeCohort)}`);
         const leadData = await leadRes.json();
         if (leadData.success) {
           setLeaders(leadData.data.slice(0, 3));
@@ -42,14 +42,14 @@ export default function Dashboard() {
 
       // 2. Fetch Active Rooms
       try {
-        const roomRes = await fetch(`http://localhost:5000/api/rooms/active`);
+        const roomRes = await fetch(`${API_URL}/api/rooms/active`);
         const roomData = await roomRes.json();
         if (roomData.success) setActiveRooms(roomData.data);
       } catch (err) { console.error("Active rooms error:", err); }
 
       // 3. Fetch Activity Heatmap & Calculate Streak
       try {
-        const actRes = await fetch(`http://localhost:5000/api/results/activity/${user._id}`);
+        const actRes = await fetch(`${API_URL}/api/results/activity/${user._id}`);
         const actData = await actRes.json();
         if (actData.success) {
           const activityMap: Record<string, number> = {};
@@ -79,7 +79,7 @@ export default function Dashboard() {
 
       // 4. Fetch Detailed Topic Progress (Accuracy & Breakdown)
       try {
-        const dashRes = await fetch(`http://localhost:5000/api/results/dashboard/${user._id}`);
+        const dashRes = await fetch(`${API_URL}/api/results/dashboard/${user._id}`);
         const dashData = await dashRes.json();
         if (dashData.success) {
           setTopicProgress(dashData.data);

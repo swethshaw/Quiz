@@ -21,7 +21,7 @@ interface CohortContextType {
 }
 
 const CohortContext = createContext<CohortContextType | undefined>(undefined);
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export const CohortProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeCohort, setActiveCohort] = useState('');
   const [cohortData, setCohortData] = useState<Record<string, Topic[]>>({});
@@ -32,7 +32,7 @@ export const CohortProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!user) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/quiz/dashboard/${user._id}`);
+      const response = await fetch(`${API_URL}/api/quiz/dashboard/${user._id}`);
       const result = await response.json();
       
       if (result.success) {

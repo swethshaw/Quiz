@@ -11,7 +11,7 @@ import {
   Timer,
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function ResultDetailPage() {
   const { resultId } = useParams();
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ export default function ResultDetailPage() {
       if (!user) return;
       try {
         const res = await fetch(
-          `http://localhost:5000/api/results/user/${user._id}`,
+          `${API_URL}/api/results/user/${user._id}`,
         );
         const data = await res.json();
 
@@ -39,7 +39,7 @@ export default function ResultDetailPage() {
           setResult(foundResult);
           if (foundResult?.playMode === "multi" && foundResult.roomCode) {
             const roomRes = await fetch(
-              `http://localhost:5000/api/rooms/${foundResult.roomCode}`,
+              `${API_URL}/api/rooms/${foundResult.roomCode}`,
             );
             const roomData = await roomRes.json();
 

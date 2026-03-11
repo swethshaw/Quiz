@@ -28,7 +28,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedUserId = localStorage.getItem('quiz_user_id');
       if (storedUserId) {
         try {
-          // Replaced hardcoded localhost with API_URL
           const res = await fetch(`${API_URL}/api/users/${storedUserId}`);
           const data = await res.json();
           if (data.success) {

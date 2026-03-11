@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { useCohort } from "../context/CohortContext";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function ResultsPage() {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -30,12 +30,12 @@ export default function ResultsPage() {
       setIsLoading(true);
       try {
         const resResults = await fetch(
-          `http://localhost:5000/api/results/user/${user._id}`,
+          `${API_URL}/api/results/user/${user._id}`,
         );
         const dataResults = await resResults.json();
         if (dataResults.success) setResults(dataResults.data);
         const resHosted = await fetch(
-          `http://localhost:5000/api/rooms/hosted/${user._id}`,
+          `${API_URL}/api/rooms/hosted/${user._id}`,
         );
         const dataHosted = await resHosted.json();
         if (dataHosted.success) setHostedRooms(dataHosted.data);

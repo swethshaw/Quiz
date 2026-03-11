@@ -20,7 +20,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "../context/UserContext";
 import { useCohort } from "../context/CohortContext";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function ActiveQuizPage() {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
@@ -86,7 +86,7 @@ export default function ActiveQuizPage() {
       ? timeLeft
       : parseInt(location.state?.timer || "30") * 60 - timeLeft;
     try {
-      const res = await fetch("http://localhost:5000/api/results", {
+      const res = await fetch(`${API_URL}/api/results`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -111,7 +111,7 @@ export default function ActiveQuizPage() {
     if (playMode === "multi" && activeRoomCode) {
       try {
         await fetch(
-          `http://localhost:5000/api/rooms/submit/${activeRoomCode}`,
+          `${API_URL}/api/rooms/submit/${activeRoomCode}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -148,7 +148,7 @@ export default function ActiveQuizPage() {
     const pollRoom = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/rooms/${activeRoomCode}`,
+          `${API_URL}/api/rooms/${activeRoomCode}`,
         );
         const data = await res.json();
 
@@ -200,7 +200,7 @@ export default function ActiveQuizPage() {
     const fetchLeaderboard = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/rooms/${activeRoomCode}`,
+          `${API_URL}/api/rooms/${activeRoomCode}`,
         );
         const data = await res.json();
         if (data.success) {
@@ -276,7 +276,7 @@ export default function ActiveQuizPage() {
         setWarnings((w) => {
           const next = w + 1;
           if (playMode === "multi" && activeRoomCode && user) {
-            fetch(`http://localhost:5000/api/rooms/warning/${activeRoomCode}`, {
+            fetch(`${API_URL}/api/rooms/warning/${activeRoomCode}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ userId: user._id }),

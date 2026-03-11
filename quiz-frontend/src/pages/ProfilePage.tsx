@@ -20,6 +20,7 @@ import {
   Lock
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export default function ProfilePage() {
 
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/users/${user._id}`);
+        const res = await fetch(`${API_URL}/api/users/${user._id}`);
         const data = await res.json();
         
         if (data.success) {
@@ -99,7 +100,7 @@ export default function ProfilePage() {
       const skillsArray = formData.skills.split(',').map((s: string) => s.trim()).filter((s: string) => s);
       const payload = { ...formData, skills: skillsArray };
 
-      const res = await fetch(`http://localhost:5000/api/users/${user?._id}`, {
+      const res = await fetch(`${API_URL}/api/users/${user?._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -130,7 +131,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${user?._id}/password`, {
+      const res = await fetch(`${API_URL}/api/users/${user?._id}/password`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword: passwordData.current, newPassword: passwordData.new })
