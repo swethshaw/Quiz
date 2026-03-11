@@ -4,6 +4,7 @@ export interface IResult extends Document {
   userId: mongoose.Types.ObjectId;
   topicId: mongoose.Types.ObjectId;
   customPaperId?: mongoose.Types.ObjectId | null;
+  cohort: string;
   score: number;
   totalQuestions: number;
   percentage: number;
@@ -23,6 +24,7 @@ const resultSchema: Schema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
   customPaperId: { type: Schema.Types.ObjectId, ref: 'Paper', default: null },
+  cohort: { type: String, required: true },
   score: { type: Number, required: true },
   totalQuestions: { type: Number, required: true },
   percentage: { type: Number, required: true },

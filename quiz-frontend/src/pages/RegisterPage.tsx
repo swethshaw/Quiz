@@ -69,10 +69,10 @@ export default function RegisterPage() {
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl shadow-violet-500/10 dark:shadow-none border border-slate-100 dark:border-slate-800 p-8 relative z-10 my-8"
+        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-4xl shadow-2xl shadow-violet-500/10 dark:shadow-none border border-slate-100 dark:border-slate-800 p-8 relative z-10 my-8"
       >
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-violet-500/30 mb-4">
+          <div className="w-12 h-12 bg-linear-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-violet-500/30 mb-4">
             <GraduationCap size={28} />
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">

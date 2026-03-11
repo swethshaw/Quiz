@@ -144,7 +144,7 @@ export default function ProctorDashboardPage() {
   const allParticipantsDone = participants.length > 0 && activeCount === 0;
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <button

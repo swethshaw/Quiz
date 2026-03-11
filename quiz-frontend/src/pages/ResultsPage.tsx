@@ -74,7 +74,7 @@ export default function ResultsPage() {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

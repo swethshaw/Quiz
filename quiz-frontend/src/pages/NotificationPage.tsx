@@ -111,7 +111,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
+    <div className="mx-auto px-4 py-8 md:py-12">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>

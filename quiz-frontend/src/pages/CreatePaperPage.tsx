@@ -93,6 +93,7 @@ export default function CreatePaperPage() {
         body: JSON.stringify({
           userId: user._id,
           topicId: topicId,
+          cohort: activeCohort,
           title: paperName.trim(),
           questions: questions,
         }),
@@ -314,6 +315,8 @@ export default function CreatePaperPage() {
             )}
           </div>
         </div>
+        
+        {/* RIGHT COLUMN - PAPER PREVIEW */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex-1 flex flex-col">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">

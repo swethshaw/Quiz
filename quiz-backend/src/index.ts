@@ -10,6 +10,7 @@ import roomRoutes from './routes/roomRoutes';
 import paperRoutes from './routes/paperRoutes';
 import debugRoute from './routes/debugRoute';
 import notificationRoutes from './routes/notificationRoutes';
+import leaderboardRoute from './routes/leaderboardRoute';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/papers', paperRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/debug', debugRoute);
+app.use('/api/leaderboard', leaderboardRoute);
 
 const PORT: number = parseInt(process.env.PORT as string, 10) || 5000;
 

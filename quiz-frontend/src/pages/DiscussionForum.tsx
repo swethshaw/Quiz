@@ -103,7 +103,7 @@ export default function DiscussionForum() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-screen">
+    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-screen">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">Community Forum</h1>
         <p className="text-slate-500 dark:text-slate-400 font-medium">Discuss issues, share ideas, and help your peers.</p>

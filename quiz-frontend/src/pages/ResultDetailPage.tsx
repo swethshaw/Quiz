@@ -108,7 +108,7 @@ export default function ResultDetailPage() {
   const dateFormatted = new Date(result.createdAt).toLocaleDateString();
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
       <button
         onClick={() => navigate("/results")}
         className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white mb-6 transition-colors"

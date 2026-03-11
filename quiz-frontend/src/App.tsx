@@ -24,7 +24,8 @@ import Notification from "./pages/NotificationPage";
 import ProctorDashboardPage from './pages/ProctorDashboardPage';
 import LeaderboardPage from "./pages/leaderboardpage";
 import DiscussionForum from "./pages/DiscussionForum";
-
+import CoursePage from "./pages/coursePage";
+import ProfilePage from "./pages/ProfilePage";
 const AppRoutes = () => {
   const { user, isAuthLoading } = useUser();
 
@@ -52,6 +53,7 @@ const AppRoutes = () => {
         <>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/course" element={<CoursePage />} />
             <Route path="/learning" element={<LearningPage />} />
             <Route path="/config/:topicId" element={<QuizConfigPage />} />
             <Route path="/create-paper/:topicId" element={<CreatePaperPage />} />
@@ -63,6 +65,7 @@ const AppRoutes = () => {
             <Route path="/notifications" element={<Notification />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/forum" element={<DiscussionForum />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
           
           {/* Fullscreen Routes (No Sidebar Layout) */}

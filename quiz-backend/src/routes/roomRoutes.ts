@@ -19,6 +19,7 @@ router.get('/active', async (req: Request, res: Response) => {
     res.json({ success: true, data: activeRooms });
   } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
 });
+
 router.post('/join/:code', async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId, name } = req.body;
@@ -119,9 +120,39 @@ router.post('/warning/:code', async (req: Request, res: Response) => {
     if (p) p.warnings = (p.warnings || 0) + 1;
 
     await room.save();
+    
     res.json({ success: true });
   } catch (error: any) { 
     res.status(500).json({ success: false, error: error.message }); 
   }
 });
+
+router.delete('/:code', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const code = (req.params.code as string).toUpperCase();
+    const deletedRoom = await Room.findOneAndDelete({ code });
+    
+    if (!deletedRoom) {
+      res.status(404).json({ success: false, message: 'Room not found' });
+      return;
+    }
+    
+    res.json({ success: true, message: 'Room deleted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST endpoint for navigator.sendBeacon() when the browser tab is closed
+router.post('/:code/delete', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const code = (req.params.code as string).toUpperCase();
+    await Room.findOneAndDelete({ code });
+    
+    res.json({ success: true, message: 'Room deleted successfully via beacon' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;

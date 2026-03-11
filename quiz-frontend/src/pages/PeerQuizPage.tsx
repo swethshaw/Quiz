@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect} from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -20,6 +20,7 @@ export default function PeerQuizPage() {
   const navigate = useNavigate();
   const { activeCohort, cohortData } = useCohort();
   const { user } = useUser();
+  const location = useLocation();
   const currentTopics = cohortData[activeCohort] || [];
   const [joinCode, setJoinCode] = useState("");
   const [selectedTopicId, setSelectedTopicId] = useState("");
@@ -52,13 +53,21 @@ export default function PeerQuizPage() {
     const interval = setInterval(fetchActiveRooms, 10000);
     return () => clearInterval(interval);
   }, []);
+  const enterFullScreen = () => {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen().catch((err) => {
+        console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    }
+  };
   const handleJoinRoom = async (code: string) => {
     if (!code.trim() || !user) return;
     setIsJoining(true);
     setJoinError("");
 
     try {
-      const res = await fetch(`http://localhost:5000/api/rooms/join/${code}`, {
+      const res = await fetch(`http://localhost:5000/api/rooms/join/${code.toUpperCase()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user._id, name: user.name }),
@@ -67,6 +76,7 @@ export default function PeerQuizPage() {
       const data = await res.json();
 
       if (data.success) {
+        enterFullScreen();
         navigate(`/lobby/${data.data.topicId._id}`, {
           state: {
             playMode: "multi",
@@ -84,6 +94,14 @@ export default function PeerQuizPage() {
       setIsJoining(false);
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const codeFromUrl = params.get("join");
+    if (codeFromUrl) {
+      setJoinCode(codeFromUrl.toUpperCase());
+    }
+  }, [location.search]);
 
   const handleCreateRoom = () => {
     if (!selectedTopicId) return;
@@ -103,7 +121,7 @@ export default function PeerQuizPage() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

@@ -92,6 +92,7 @@ export default function ActiveQuizPage() {
         body: JSON.stringify({
           userId: user._id,
           topicId: topicId,
+          cohort: activeCohort,
           customPaperId: location.state?.customPaperId || null,
           roomCode: activeRoomCode,
           score: finalScore,
@@ -139,6 +140,7 @@ export default function ActiveQuizPage() {
     location.state,
     activeRoomCode,
   ]);
+
   useEffect(() => {
     if (playMode !== "multi" || !activeRoomCode || isFinished || hostAction)
       return;
@@ -178,6 +180,7 @@ export default function ActiveQuizPage() {
     const interval = setInterval(pollRoom, 3000);
     return () => clearInterval(interval);
   }, [playMode, activeRoomCode, isFinished, hostAction, user]);
+
   useEffect(() => {
     if (!hostAction) return;
     const timer = setTimeout(() => {
@@ -191,6 +194,7 @@ export default function ActiveQuizPage() {
     }, 3000);
     return () => clearTimeout(timer);
   }, [hostAction, navigate, submitQuiz]);
+
   useEffect(() => {
     if (!isFinished || playMode !== "multi" || !activeRoomCode) return;
     const fetchLeaderboard = async () => {
@@ -218,12 +222,53 @@ export default function ActiveQuizPage() {
     const interval = setInterval(fetchLeaderboard, 3000);
     return () => clearInterval(interval);
   }, [isFinished, playMode, activeRoomCode]);
+
   useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-    if (!isFinished)
-      document.addEventListener("contextmenu", handleContextMenu);
-    return () => document.removeEventListener("contextmenu", handleContextMenu);
-  }, [isFinished]);
+  if (isFinished) return;
+
+  // Block right click
+  const blockContextMenu = (e:any) => e.preventDefault();
+
+  // Allow only LEFT CLICK
+  const blockMouseButtons = (e:any) => {
+    if (e.button !== 0) {
+      e.preventDefault();
+    }
+  };
+
+  // Block keyboard shortcuts
+  const blockKeyboard = (e:any) => {
+    e.preventDefault();
+  };
+
+  // Block scrolling
+  const blockScroll = (e:any) => {
+    e.preventDefault();
+  };
+
+  // Block clipboard actions
+  const blockClipboard = (e:any) => {
+    e.preventDefault();
+  };
+
+  document.addEventListener("contextmenu", blockContextMenu);
+  document.addEventListener("mousedown", blockMouseButtons);
+  document.addEventListener("keydown", blockKeyboard);
+  document.addEventListener("wheel", blockScroll, { passive: false });
+  document.addEventListener("copy", blockClipboard);
+  document.addEventListener("paste", blockClipboard);
+  document.addEventListener("cut", blockClipboard);
+
+  return () => {
+    document.removeEventListener("contextmenu", blockContextMenu);
+    document.removeEventListener("mousedown", blockMouseButtons);
+    document.removeEventListener("keydown", blockKeyboard);
+    document.removeEventListener("wheel", blockScroll);
+    document.removeEventListener("copy", blockClipboard);
+    document.removeEventListener("paste", blockClipboard);
+    document.removeEventListener("cut", blockClipboard);
+  };
+}, [isFinished]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -246,6 +291,87 @@ export default function ActiveQuizPage() {
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [isFinished, submitQuiz, playMode, activeRoomCode, user]);
+  
+//   useEffect(() => {
+//   if (isFinished) return;
+
+//   let devtoolsOpen = false;
+
+//   const detectDevTools = () => {
+//     const threshold = 30;
+
+//     const widthThreshold =
+//       window.outerWidth - window.innerWidth > threshold;
+//     const heightThreshold =
+//       window.outerHeight - window.innerHeight > threshold;
+
+//     if (widthThreshold || heightThreshold) {
+//       if (!devtoolsOpen) {
+//         devtoolsOpen = true;
+
+//         setWarnings((w) => {
+//           const next = w + 1;
+
+//           if (playMode === "multi" && activeRoomCode && user) {
+//             fetch(`http://localhost:5000/api/rooms/warning/${activeRoomCode}`, {
+//               method: "POST",
+//               headers: { "Content-Type": "application/json" },
+//               body: JSON.stringify({ userId: user._id }),
+//             }).catch(console.error);
+//           }
+
+//           if (next >= 3) submitQuiz();
+
+//           return next;
+//         });
+//       }
+//     } else {
+//       devtoolsOpen = false;
+//     }
+//   };
+
+//   const interval = setInterval(detectDevTools, 1000);
+
+//   return () => clearInterval(interval);
+// }, [isFinished, playMode, activeRoomCode, user, submitQuiz]);
+
+//   useEffect(() => {
+//   if (isFinished) return;
+
+//   let detected = false;
+
+//   const element = new Image();
+
+//   Object.defineProperty(element, "id", {
+//     get: function () {
+//       if (!detected) {
+//         detected = true;
+
+//         setWarnings((w) => {
+//           const next = w + 1;
+
+//           if (playMode === "multi" && activeRoomCode && user) {
+//             fetch(`http://localhost:5000/api/rooms/warning/${activeRoomCode}`, {
+//               method: "POST",
+//               headers: { "Content-Type": "application/json" },
+//               body: JSON.stringify({ userId: user._id }),
+//             }).catch(console.error);
+//           }
+
+//           if (next >= 3) submitQuiz();
+
+//           return next;
+//         });
+//       }
+//     },
+//   });
+
+//   const interval = setInterval(() => {
+//     console.log(element);
+//   }, 1000);
+
+//   return () => clearInterval(interval);
+// }, [isFinished, playMode, activeRoomCode, user, submitQuiz]);
 
   useEffect(() => {
     const checkFullscreen = () => {
@@ -544,7 +670,7 @@ export default function ActiveQuizPage() {
                 You must remain in fullscreen mode. Auto-submitting in:
               </p>
               <p className="text-7xl font-black text-red-500 mb-8">
-                {fsWarningTimer}
+                {fsWarningTimer-1}
               </p>
               <button
                 onClick={returnToFullscreen}
