@@ -18,7 +18,7 @@ const app: Application = express();
 connectDB();
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://quiz-six-swart-50.vercel.app/'],
+  origin: ['http://localhost:5173', 'https://quiz-six-swart-50.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true
 }));
