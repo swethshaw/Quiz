@@ -6,7 +6,6 @@ import {
   Copy,
   Link as LinkIcon,
   Mail,
-  CheckCircle2,
   User,
   Loader2,
   MonitorOff,
@@ -371,7 +370,7 @@ export default function QuizLobbyPage() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden min-h-[500px] flex flex-col"
+              className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden min-h-125 flex flex-col"
             >
               <AnimatePresence>
                 {lobbyStatus === "starting" && countdown !== null && (
@@ -430,7 +429,7 @@ export default function QuizLobbyPage() {
                   </h3>
                   
                   {/* Premium Room Code Card */}
-                  <div className="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900 rounded-3xl p-6 text-white text-center shadow-lg dark:shadow-blue-900/30 relative overflow-hidden mb-6 border border-transparent dark:border-blue-800/30">
+                  <div className="bg-linear-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900 rounded-3xl p-6 text-white text-center shadow-lg dark:shadow-blue-900/30 relative overflow-hidden mb-6 border border-transparent dark:border-blue-800/30">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
                     <p className="text-blue-200 dark:text-blue-300 text-xs font-bold uppercase tracking-widest mb-2 relative z-10">Room Code</p>
                     <p className="text-5xl font-black tracking-[0.15em] mb-6 relative z-10">{activeRoomCode}</p>
