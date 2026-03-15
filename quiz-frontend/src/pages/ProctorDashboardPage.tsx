@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,7 +15,12 @@ import {
   Trophy,
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
+import { io } from "socket.io-client";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// Connect to the socket server
+const socket = io(API_URL);
+
 export default function ProctorDashboardPage() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
@@ -25,9 +30,12 @@ export default function ProctorDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const isEndingRef = useRef(false);
 
+  // Initial Fetch & Real-Time Socket Setup
   useEffect(() => {
     if (!user || !roomCode) return;
-    const fetchLiveRoomData = async () => {
+
+    // 1. Fetch initial state once
+    const fetchInitialData = async () => {
       try {
         const res = await fetch(`${API_URL}/api/rooms/${roomCode}`);
         const data = await res.json();
@@ -43,69 +51,115 @@ export default function ProctorDashboardPage() {
             );
           }
           setParticipants(parts);
-
-          if (data.data.status === "playing" && parts.length > 0) {
-            const stillActiveCount = parts.filter(
-              (p: any) => p.status === "Joined" || p.status === "Playing",
-            ).length;
-
-            if (stillActiveCount === 0 && !isEndingRef.current) {
-              isEndingRef.current = true;
-              handleHostAction("end");
-            }
-          }
         }
       } catch (err) {
-        console.error("Failed to fetch live room data", err);
+        console.error("Failed to fetch initial room data", err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchLiveRoomData();
-    const interval = setInterval(() => {
-      if (roomData?.status !== "finished") fetchLiveRoomData();
-    }, 3000);
+    fetchInitialData();
 
-    return () => clearInterval(interval);
-  }, [roomCode, user, roomData?.status]);
+    // 2. Setup Socket Connection for Live Updates
+    socket.emit("join_room", roomCode);
 
-  const handleHostAction = async (
-    action: "kick" | "block" | "end",
-    targetUserId?: string,
-  ) => {
-    if (action === "block" || action === "kick") {
-      setParticipants((prev) =>
-        prev.map((p) =>
-          p.userId === targetUserId
-            ? {
-                ...p,
-                status: action === "block" ? "Blocked" : "Kicked",
-                _isProcessing: true,
-              }
-            : p,
-        ),
-      );
-    }
+    // Listen for live student updates (Warnings, Progress, Submissions)
+    socket.on("update_proctor_view", (data: any) => {
+      setParticipants((prev) => {
+        const newParts = [...prev];
+        const pIndex = newParts.findIndex((p) => p.userId === data.userId);
 
-    try {
-      const res = await fetch(
-        `${API_URL}/api/rooms/host-action/${roomCode}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action, targetUserId }),
-        },
-      );
-      const data = await res.json();
+        if (pIndex > -1) {
+          if (data.type === "warning") {
+            newParts[pIndex].warnings = data.count;
+          } else if (data.type === "progress") {
+            newParts[pIndex].score = data.currentScore;
+          } else if (data.type === "submit") {
+            newParts[pIndex].status = "Submitted";
+            newParts[pIndex].score = data.finalScore;
+            newParts[pIndex].timeSpentSeconds = data.timeSpentSeconds;
+          }
+        }
+        return newParts;
+      });
+    });
 
-      if (action === "end" && data.success) {
-        setRoomData(data.data);
+    // Cleanup listeners
+    return () => {
+      socket.off("update_proctor_view");
+    };
+  }, [roomCode, user]);
+
+  // Host Actions (Kick/Block/End) - Wrapped in useCallback for safe dependency usage
+  const handleHostAction = useCallback(
+    async (action: "kick" | "block" | "end", targetUserId?: string) => {
+      // 1. Optimistic UI Update
+      if (action === "block" || action === "kick") {
+        setParticipants((prev) =>
+          prev.map((p) =>
+            p.userId === targetUserId
+              ? {
+                  ...p,
+                  status: action === "block" ? "Blocked" : "Kicked",
+                  _isProcessing: true,
+                }
+              : p,
+          ),
+        );
       }
-    } catch (err) {
-      console.error(`Failed to ${action} user`, err);
+
+      try {
+        // 2. Update Database
+        const res = await fetch(
+          `${API_URL}/api/rooms/host-action/${roomCode}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, targetUserId }),
+          },
+        );
+        const data = await res.json();
+
+        if (action === "end" && data.success) {
+          setRoomData(data.data);
+          // Sort final leaderboard locally since it ended
+          setParticipants((prev) =>
+            [...prev].sort(
+              (a, b) =>
+                b.score - a.score || a.timeSpentSeconds - b.timeSpentSeconds,
+            ),
+          );
+        }
+
+        // 3. Emit Socket event to force immediate action on student's screen
+        socket.emit("host_action", { roomCode, action, targetUserId });
+      } catch (err) {
+        console.error(`Failed to ${action} user`, err);
+      }
+    },
+    [roomCode],
+  );
+
+  // AUTO-END QUIZ LOGIC: Automatically triggers if all users submit
+  useEffect(() => {
+    if (!roomData || isEndingRef.current || roomData.status === "finished")
+      return;
+
+    const stillActiveCount = participants.filter(
+      (p) => p.status === "Joined" || p.status === "Playing",
+    ).length;
+
+    // If there are participants, and none are active anymore, trigger end!
+    if (
+      participants.length > 0 &&
+      stillActiveCount === 0 &&
+      !isEndingRef.current
+    ) {
+      isEndingRef.current = true;
+      handleHostAction("end");
     }
-  };
+  }, [participants, roomData, handleHostAction]);
 
   const formatTime = (seconds: number) => {
     return `${Math.floor(seconds / 60)
@@ -119,6 +173,7 @@ export default function ProctorDashboardPage() {
         <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
       </div>
     );
+
   if (!roomData)
     return (
       <div className="p-8 text-center font-bold text-slate-500">
@@ -140,7 +195,6 @@ export default function ProctorDashboardPage() {
     (acc, p) => acc + (p.warnings || 0),
     0,
   );
-
   const allParticipantsDone = participants.length > 0 && activeCount === 0;
 
   return (
@@ -313,31 +367,31 @@ export default function ProctorDashboardPage() {
                       )}
                     </div>
 
-                    {(p.status === "Submitted" ||
-                      p.status === "Blocked" ||
-                      isFinished) && (
-                      <div className="mt-2 mb-2 p-3 bg-white/50 dark:bg-slate-900/50 rounded-xl flex justify-between items-center">
-                        <div>
-                          <span className="text-xs font-bold text-slate-500 uppercase block">
-                            Final Score
+                    <div className="mt-2 mb-2 p-3 bg-white/50 dark:bg-slate-900/50 rounded-xl flex justify-between items-center">
+                      <div>
+                        <span className="text-xs font-bold text-slate-500 uppercase block">
+                          Current Score
+                        </span>
+                        <span className="font-black text-xl text-slate-900 dark:text-white">
+                          {p.score || 0}{" "}
+                          <span className="text-sm font-bold text-slate-500">
+                            pts
                           </span>
-                          <span className="font-black text-xl text-slate-900 dark:text-white">
-                            {p.score}{" "}
-                            <span className="text-sm font-bold text-slate-500">
-                              pts
-                            </span>
-                          </span>
-                        </div>
+                        </span>
+                      </div>
+                      {(p.status === "Submitted" ||
+                        p.status === "Blocked" ||
+                        isFinished) && (
                         <div className="text-right">
                           <span className="text-xs font-bold text-slate-500 uppercase block">
                             Time
                           </span>
                           <span className="font-bold text-slate-700 dark:text-slate-300">
-                            {formatTime(p.timeSpentSeconds)}
+                            {formatTime(p.timeSpentSeconds || 0)}
                           </span>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
 
                   {!isFinished && (

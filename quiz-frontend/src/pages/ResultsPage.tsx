@@ -5,14 +5,16 @@ import {
   Clock,
   Users,
   User,
-  ChevronRight,
   Loader2,
   ShieldCheck,
   Activity,
+  ChevronRight,
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { useCohort } from "../context/CohortContext";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 export default function ResultsPage() {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -34,6 +36,7 @@ export default function ResultsPage() {
         );
         const dataResults = await resResults.json();
         if (dataResults.success) setResults(dataResults.data);
+
         const resHosted = await fetch(
           `${API_URL}/api/rooms/hosted/${user._id}`,
         );
@@ -50,6 +53,7 @@ export default function ResultsPage() {
 
   const currentTopics = cohortData[activeCohort] || [];
   const validTopicIds = new Set(currentTopics.map((t) => t._id.toString()));
+
   const filteredResults = results.filter((r) => {
     const tId =
       typeof r.topicId === "string" ? r.topicId : r.topicId?._id?.toString();
@@ -185,46 +189,59 @@ export default function ResultsPage() {
                 </p>
               </div>
             ) : (
-              filteredHostedRooms.map((room) => (
-                <div
-                  key={room._id}
-                  onClick={() => navigate(`/proctor/${room.code}`)}
-                  className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md hover:border-purple-200 dark:hover:border-purple-800 transition-all cursor-pointer flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group"
-                >
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span
-                        className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${room.status === "finished" ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse"}`}
-                      >
-                        {room.status === "finished" ? (
-                          <ShieldCheck size={12} />
-                        ) : (
-                          <Activity size={12} />
-                        )}
-                        {room.status === "finished" ? "Ended" : "Live"}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
-                        <Clock size={12} />{" "}
-                        {new Date(room.createdAt).toLocaleDateString()}
-                      </span>
+              filteredHostedRooms.map((room) => {
+                // Calculate if there are any active participants left
+                const activeCount =
+                  room.participants?.filter(
+                    (p: any) => p.status === "Joined" || p.status === "Playing",
+                  ).length || 0;
+
+                // If room is manually finished, or if everyone who joined has submitted/been blocked
+                const isRoomEnded =
+                  room.status === "finished" ||
+                  (room.participants?.length > 0 && activeCount === 0);
+
+                return (
+                  <div
+                    key={room._id}
+                    onClick={() => navigate(`/proctor/${room.code}`)}
+                    className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md hover:border-purple-200 dark:hover:border-purple-800 transition-all cursor-pointer flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group"
+                  >
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span
+                          className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${isRoomEnded ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse"}`}
+                        >
+                          {isRoomEnded ? (
+                            <ShieldCheck size={12} />
+                          ) : (
+                            <Activity size={12} />
+                          )}
+                          {isRoomEnded ? "Ended" : "Live"}
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                          <Clock size={12} />{" "}
+                          {new Date(room.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                        {room.topicId?.title || "Assessment"}
+                      </h3>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                      {room.topicId?.title || "Assessment"}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-slate-100 dark:border-slate-800 pt-4 md:pt-0">
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">
-                        Room Code
-                      </p>
-                      <p className="text-xl font-black text-slate-700 dark:text-slate-300 tracking-widest">
-                        {room.code}
-                      </p>
+                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-slate-100 dark:border-slate-800 pt-4 md:pt-0">
+                      <div className="text-right">
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">
+                          Room Code
+                        </p>
+                        <p className="text-xl font-black text-slate-700 dark:text-slate-300 tracking-widest">
+                          {room.code}
+                        </p>
+                      </div>
+                      <ChevronRight className="text-slate-300 dark:text-slate-600 group-hover:text-purple-500 transition-colors" />
                     </div>
-                    <ChevronRight className="text-slate-300 dark:text-slate-600 group-hover:text-purple-500 transition-colors" />
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </motion.div>
         )}

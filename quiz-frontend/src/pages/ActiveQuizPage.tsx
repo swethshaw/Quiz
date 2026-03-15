@@ -20,7 +20,11 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "../context/UserContext";
 import { useCohort } from "../context/CohortContext";
+import { io } from "socket.io-client";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const socket = io(API_URL);
+
 export default function ActiveQuizPage() {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
@@ -34,12 +38,14 @@ export default function ActiveQuizPage() {
     generatedQuestions = [],
     roomCode,
   } = location.state || {};
+
   const activeRoomCode = roomCode || null;
   const isRevision = subMode === "revision";
   const currentTopics = cohortData[activeCohort] || [];
   const topicInfo = currentTopics.find((t) => t._id === topicId);
   const initialTimeInSeconds =
     isRevision || timer === "No Limit" ? 0 : parseInt(timer) * 60;
+
   const [questions] = useState<any[]>(generatedQuestions);
   const [isFinished, setIsFinished] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -85,6 +91,7 @@ export default function ActiveQuizPage() {
     const timeSpent = isRevision
       ? timeLeft
       : parseInt(location.state?.timer || "30") * 60 - timeLeft;
+
     try {
       const res = await fetch(`${API_URL}/api/results`, {
         method: "POST",
@@ -108,20 +115,29 @@ export default function ActiveQuizPage() {
     } catch (err) {
       console.error("Failed to save result", err);
     }
+
     if (playMode === "multi" && activeRoomCode) {
       try {
-        await fetch(
-          `${API_URL}/api/rooms/submit/${activeRoomCode}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: user._id,
-              score: finalScore,
-              timeSpentSeconds: timeSpent,
-            }),
+        await fetch(`${API_URL}/api/rooms/submit/${activeRoomCode}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user._id,
+            score: finalScore,
+            timeSpentSeconds: timeSpent,
+          }),
+        });
+
+        // Notify host instantly
+        socket.emit("participant_event", {
+          roomCode: activeRoomCode,
+          data: {
+            userId: user._id,
+            type: "submit",
+            finalScore,
+            timeSpentSeconds: timeSpent,
           },
-        );
+        });
       } catch (err) {
         console.error("Failed to update room leaderboard", err);
       }
@@ -141,17 +157,50 @@ export default function ActiveQuizPage() {
     activeRoomCode,
   ]);
 
+  // --- Real-time Engine (Sockets + Fail-safe Polling) ---
   useEffect(() => {
-    if (playMode !== "multi" || !activeRoomCode || isFinished || hostAction)
+    if (
+      playMode !== "multi" ||
+      !activeRoomCode ||
+      isFinished ||
+      hostAction ||
+      !user
+    )
       return;
 
+    // 1. Join Socket for INSTANT kicks/blocks
+    socket.emit("join_room", activeRoomCode);
+
+    const handleForceAction = ({ action, targetUserId }: any) => {
+      // Wrapped in String() to prevent exact-match type bugs (ObjectId vs String)
+      if (String(targetUserId) === String(user._id)) {
+        if (action === "kick") {
+          setHostAction({
+            type: "kick",
+            msg: "The host has removed you from the session.",
+          });
+        } else if (action === "block") {
+          setHostAction({
+            type: "block",
+            msg: "The host has force-submitted your quiz.",
+          });
+        }
+      }
+    };
+
+    socket.on("force_action", handleForceAction);
+    socket.on("quiz_ended_by_host", () => {
+      setHostAction({
+        type: "end",
+        msg: "The host has ended the quiz for everyone.",
+      });
+    });
+
+    // 2. Lightweight Fallback Poller (Catches events if socket drops during page load)
     const pollRoom = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/api/rooms/${activeRoomCode}`,
-        );
+        const res = await fetch(`${API_URL}/api/rooms/${activeRoomCode}`);
         const data = await res.json();
-
         if (data.success) {
           const room = data.data;
           if (room.status === "finished") {
@@ -161,8 +210,9 @@ export default function ActiveQuizPage() {
             });
             return;
           }
-
-          const me = room.participants.find((p: any) => p.userId === user?._id);
+          const me = room.participants.find(
+            (p: any) => String(p.userId) === String(user._id),
+          );
           if (!me)
             setHostAction({
               type: "kick",
@@ -177,8 +227,14 @@ export default function ActiveQuizPage() {
       } catch (err) {}
     };
 
-    const interval = setInterval(pollRoom, 3000);
-    return () => clearInterval(interval);
+    pollRoom();
+    const interval = setInterval(pollRoom, 4000);
+
+    return () => {
+      socket.off("force_action", handleForceAction);
+      socket.off("quiz_ended_by_host");
+      clearInterval(interval);
+    };
   }, [playMode, activeRoomCode, isFinished, hostAction, user]);
 
   useEffect(() => {
@@ -195,13 +251,13 @@ export default function ActiveQuizPage() {
     return () => clearTimeout(timer);
   }, [hostAction, navigate, submitQuiz]);
 
+  // Leaderboard fetcher for final screen
   useEffect(() => {
     if (!isFinished || playMode !== "multi" || !activeRoomCode) return;
+
     const fetchLeaderboard = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/api/rooms/${activeRoomCode}`,
-        );
+        const res = await fetch(`${API_URL}/api/rooms/${activeRoomCode}`);
         const data = await res.json();
         if (data.success) {
           const sorted = data.data.participants
@@ -214,74 +270,72 @@ export default function ActiveQuizPage() {
             );
           setLeaderboard(sorted);
         }
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) {}
     };
+
     fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 3000);
-    return () => clearInterval(interval);
+
+    socket.on("update_proctor_view", (data) => {
+      if (data.type === "submit") fetchLeaderboard();
+    });
+
+    return () => {
+      socket.off("update_proctor_view");
+    };
   }, [isFinished, playMode, activeRoomCode]);
 
   useEffect(() => {
-  if (isFinished) return;
+    if (isFinished) return;
 
-  // Block right click
-  const blockContextMenu = (e:any) => e.preventDefault();
+    const blockContextMenu = (e: any) => e.preventDefault();
+    const blockMouseButtons = (e: any) => {
+      if (e.button !== 0) e.preventDefault();
+    };
+    const blockKeyboard = (e: any) => e.preventDefault();
+    const blockScroll = (e: any) => e.preventDefault();
+    const blockClipboard = (e: any) => e.preventDefault();
 
-  // Allow only LEFT CLICK
-  const blockMouseButtons = (e:any) => {
-    if (e.button !== 0) {
-      e.preventDefault();
-    }
-  };
+    document.addEventListener("contextmenu", blockContextMenu);
+    document.addEventListener("mousedown", blockMouseButtons);
+    document.addEventListener("keydown", blockKeyboard);
+    document.addEventListener("wheel", blockScroll, { passive: false });
+    document.addEventListener("copy", blockClipboard);
+    document.addEventListener("paste", blockClipboard);
+    document.addEventListener("cut", blockClipboard);
 
-  // Block keyboard shortcuts
-  const blockKeyboard = (e:any) => {
-    e.preventDefault();
-  };
+    return () => {
+      document.removeEventListener("contextmenu", blockContextMenu);
+      document.removeEventListener("mousedown", blockMouseButtons);
+      document.removeEventListener("keydown", blockKeyboard);
+      document.removeEventListener("wheel", blockScroll);
+      document.removeEventListener("copy", blockClipboard);
+      document.removeEventListener("paste", blockClipboard);
+      document.removeEventListener("cut", blockClipboard);
+    };
+  }, [isFinished]);
 
-  // Block scrolling
-  const blockScroll = (e:any) => {
-    e.preventDefault();
-  };
-
-  // Block clipboard actions
-  const blockClipboard = (e:any) => {
-    e.preventDefault();
-  };
-
-  document.addEventListener("contextmenu", blockContextMenu);
-  document.addEventListener("mousedown", blockMouseButtons);
-  document.addEventListener("keydown", blockKeyboard);
-  document.addEventListener("wheel", blockScroll, { passive: false });
-  document.addEventListener("copy", blockClipboard);
-  document.addEventListener("paste", blockClipboard);
-  document.addEventListener("cut", blockClipboard);
-
-  return () => {
-    document.removeEventListener("contextmenu", blockContextMenu);
-    document.removeEventListener("mousedown", blockMouseButtons);
-    document.removeEventListener("keydown", blockKeyboard);
-    document.removeEventListener("wheel", blockScroll);
-    document.removeEventListener("copy", blockClipboard);
-    document.removeEventListener("paste", blockClipboard);
-    document.removeEventListener("cut", blockClipboard);
-  };
-}, [isFinished]);
-
+  // Tab switching warning logic
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && !isFinished) {
         setWarnings((w) => {
           const next = w + 1;
+
           if (playMode === "multi" && activeRoomCode && user) {
+            // DB Backup
             fetch(`${API_URL}/api/rooms/warning/${activeRoomCode}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ userId: user._id }),
             }).catch(console.error);
+
+            // INSTANT Socket Notification
+            socket.emit("participant_event", {
+              roomCode: activeRoomCode,
+              data: { userId: user._id, type: "warning", count: next },
+            });
           }
+
           if (next >= 3) submitQuiz();
           return next;
         });
@@ -291,87 +345,6 @@ export default function ActiveQuizPage() {
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [isFinished, submitQuiz, playMode, activeRoomCode, user]);
-  
-//   useEffect(() => {
-//   if (isFinished) return;
-
-//   let devtoolsOpen = false;
-
-//   const detectDevTools = () => {
-//     const threshold = 30;
-
-//     const widthThreshold =
-//       window.outerWidth - window.innerWidth > threshold;
-//     const heightThreshold =
-//       window.outerHeight - window.innerHeight > threshold;
-
-//     if (widthThreshold || heightThreshold) {
-//       if (!devtoolsOpen) {
-//         devtoolsOpen = true;
-
-//         setWarnings((w) => {
-//           const next = w + 1;
-
-//           if (playMode === "multi" && activeRoomCode && user) {
-//             fetch(`http://localhost:5000/api/rooms/warning/${activeRoomCode}`, {
-//               method: "POST",
-//               headers: { "Content-Type": "application/json" },
-//               body: JSON.stringify({ userId: user._id }),
-//             }).catch(console.error);
-//           }
-
-//           if (next >= 3) submitQuiz();
-
-//           return next;
-//         });
-//       }
-//     } else {
-//       devtoolsOpen = false;
-//     }
-//   };
-
-//   const interval = setInterval(detectDevTools, 1000);
-
-//   return () => clearInterval(interval);
-// }, [isFinished, playMode, activeRoomCode, user, submitQuiz]);
-
-//   useEffect(() => {
-//   if (isFinished) return;
-
-//   let detected = false;
-
-//   const element = new Image();
-
-//   Object.defineProperty(element, "id", {
-//     get: function () {
-//       if (!detected) {
-//         detected = true;
-
-//         setWarnings((w) => {
-//           const next = w + 1;
-
-//           if (playMode === "multi" && activeRoomCode && user) {
-//             fetch(`http://localhost:5000/api/rooms/warning/${activeRoomCode}`, {
-//               method: "POST",
-//               headers: { "Content-Type": "application/json" },
-//               body: JSON.stringify({ userId: user._id }),
-//             }).catch(console.error);
-//           }
-
-//           if (next >= 3) submitQuiz();
-
-//           return next;
-//         });
-//       }
-//     },
-//   });
-
-//   const interval = setInterval(() => {
-//     console.log(element);
-//   }, 1000);
-
-//   return () => clearInterval(interval);
-// }, [isFinished, playMode, activeRoomCode, user, submitQuiz]);
 
   useEffect(() => {
     const checkFullscreen = () => {
@@ -422,7 +395,25 @@ export default function ActiveQuizPage() {
 
   const handleOptionSelect = (optIndex: number) => {
     if (isRevision && evaluations[currentQuestionIndex]) return;
-    setAnswers((prev) => ({ ...prev, [currentQuestionIndex]: optIndex }));
+
+    setAnswers((prev) => {
+      const newAnswers = { ...prev, [currentQuestionIndex]: optIndex };
+
+      // Calculate live score and emit to proctor instantly
+      if (playMode === "multi" && activeRoomCode && user) {
+        let liveScore = 0;
+        questions.forEach((q, idx) => {
+          if (newAnswers[idx] === q.correctAnswerIndex) liveScore++;
+        });
+        socket.emit("participant_event", {
+          roomCode: activeRoomCode,
+          data: { userId: user._id, type: "progress", currentScore: liveScore },
+        });
+      }
+
+      return newAnswers;
+    });
+
     if (skipped.has(currentQuestionIndex)) {
       const newSkipped = new Set(skipped);
       newSkipped.delete(currentQuestionIndex);
@@ -432,9 +423,23 @@ export default function ActiveQuizPage() {
 
   const handleClear = () => {
     if (isRevision && evaluations[currentQuestionIndex]) return;
-    const newAnswers = { ...answers };
-    delete newAnswers[currentQuestionIndex];
-    setAnswers(newAnswers);
+    setAnswers((prev) => {
+      const newAnswers = { ...prev };
+      delete newAnswers[currentQuestionIndex];
+
+      if (playMode === "multi" && activeRoomCode && user) {
+        let liveScore = 0;
+        questions.forEach((q, idx) => {
+          if (newAnswers[idx] === q.correctAnswerIndex) liveScore++;
+        });
+        socket.emit("participant_event", {
+          roomCode: activeRoomCode,
+          data: { userId: user._id, type: "progress", currentScore: liveScore },
+        });
+      }
+
+      return newAnswers;
+    });
   };
 
   const handleMark = () => {
@@ -460,8 +465,9 @@ export default function ActiveQuizPage() {
       isRevision &&
       answers[currentQuestionIndex] !== undefined &&
       !evaluations[currentQuestionIndex]
-    )
+    ) {
       evaluateCurrent();
+    }
     setCurrentQuestionIndex(index);
   };
 
@@ -479,6 +485,7 @@ export default function ActiveQuizPage() {
         Paper Initialization Failed.
       </div>
     );
+
   if (isFinished) {
     const percentage = Math.round((score / questions.length) * 100);
     return (
@@ -608,12 +615,14 @@ export default function ActiveQuizPage() {
       </div>
     );
   }
+
   const currentQ = questions[currentQuestionIndex];
   const isAnswered = answers[currentQuestionIndex] !== undefined;
   const isEval = isRevision && evaluations[currentQuestionIndex] !== undefined;
 
   return (
     <div className="min-h-screen bg-linear-to-br from-teal-50/50 to-fuchsia-50/50 dark:from-slate-900 dark:to-slate-900 font-sans flex flex-col select-none">
+      {/* Notice Modal (z-[100] forces it to strictly sit above the quiz UI) */}
       <AnimatePresence>
         {hostAction && (
           <motion.div
@@ -650,6 +659,7 @@ export default function ActiveQuizPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
       <AnimatePresence>
         {showFullscreenWarning && !hostAction && (
           <motion.div
@@ -670,7 +680,7 @@ export default function ActiveQuizPage() {
                 You must remain in fullscreen mode. Auto-submitting in:
               </p>
               <p className="text-7xl font-black text-red-500 mb-8">
-                {fsWarningTimer-1}
+                {fsWarningTimer - 1}
               </p>
               <button
                 onClick={returnToFullscreen}
@@ -764,7 +774,6 @@ export default function ActiveQuizPage() {
               const isSelected = answers[currentQuestionIndex] === index;
               const isCorrectAnswer =
                 questions[currentQuestionIndex].correctAnswerIndex === index;
-
               let btnClass =
                 "border-2 border-blue-200 dark:border-slate-700 bg-blue-50/50 dark:bg-slate-800 text-slate-700 dark:text-slate-300";
               if (isSelected && (!isRevision || !isEval))

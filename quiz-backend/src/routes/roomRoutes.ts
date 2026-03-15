@@ -43,7 +43,7 @@ router.post('/join/:code', async (req: Request, res: Response): Promise<void> =>
         score: 0, 
         timeSpentSeconds: 0,
         warnings: 0 
-      });
+      } as any);
       await room.save();
     }
 
@@ -57,38 +57,66 @@ router.post('/host-action/:code', async (req: Request, res: Response) => {
   try {
     const { action, targetUserId } = req.body;
     const room = await Room.findOne({ code: (req.params.code as string).toUpperCase() });
-    if (!room) throw new Error("Room not found");
-
-    if (action === 'start') room.status = 'playing';
-    if (action === 'kick') {
-      room.participants = room.participants.filter(p => p.userId.toString() !== targetUserId) as any;
+    
+    if (!room) {
+      throw new Error("Room not found");
     }
-    if (action === 'block') {
+
+    if (action === 'start') {
+      room.status = 'playing';
+      room.participants.forEach(p => {
+        if (p.status === 'Joined') {
+          p.status = 'Playing';
+        }
+      });
+    } 
+    else if (action === 'kick') {
+      room.participants = room.participants.filter(
+        p => p.userId.toString() !== targetUserId
+      ) as any; 
+    } 
+    else if (action === 'block') {
       const p = room.participants.find(p => p.userId.toString() === targetUserId);
       if (p) p.status = 'Blocked';
+    } 
+    else if (action === 'end') {
+      room.status = 'finished';
     }
 
     await room.save();
     res.json({ success: true, data: room });
-  } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
+    
+  } catch (error: any) { 
+    res.status(500).json({ success: false, error: error.message }); 
+  }
 });
 
 router.post('/submit/:code', async (req: Request, res: Response) => {
   try {
     const { userId, score, timeSpentSeconds } = req.body;
     const room = await Room.findOne({ code: (req.params.code as string).toUpperCase() });
-    if (!room) throw new Error("Room not found");
-
+    
+    if (!room) {
+      throw new Error("Room not found");
+    }
     const p = room.participants.find(p => p.userId.toString() === userId);
     if (p) {
       p.status = 'Submitted';
       p.score = score;
       p.timeSpentSeconds = timeSpentSeconds;
     }
+    const stillActive = room.participants.filter(
+      participant => participant.status === 'Joined' || participant.status === 'Playing'
+    );
+    if (stillActive.length === 0 && room.participants.length > 0) {
+      room.status = 'finished';
+    }
 
     await room.save();
     res.json({ success: true, data: room });
-  } catch (error: any) { res.status(500).json({ success: false, error: error.message }); }
+  } catch (error: any) { 
+    res.status(500).json({ success: false, error: error.message }); 
+  }
 });
 
 router.get('/:code', async (req: Request, res: Response) => {
@@ -143,7 +171,6 @@ router.delete('/:code', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// POST endpoint for navigator.sendBeacon() when the browser tab is closed
 router.post('/:code/delete', async (req: Request, res: Response): Promise<void> => {
   try {
     const code = (req.params.code as string).toUpperCase();
