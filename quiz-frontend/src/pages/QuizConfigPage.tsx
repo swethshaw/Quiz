@@ -13,7 +13,8 @@ import {
   Database,
   FileText,
   Plus,
-  Loader2
+  Loader2,
+  ShieldAlert,
 } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useCohort } from "../context/CohortContext";
@@ -40,6 +41,7 @@ const QUESTION_TYPE_OPTIONS = [
   "Skipped",
 ];
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 export default function QuizConfigPage() {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
@@ -48,9 +50,10 @@ export default function QuizConfigPage() {
   const { user } = useUser();
   const currentTopics = cohortData[activeCohort] || [];
   const topicInfo = currentTopics.find((t) => t._id === topicId);
-  const [playMode, setPlayMode] = useState<PlayMode>(
-    location.state?.defaultPlayMode || "individual",
-  );
+
+  const { playMode: defaultPlayMode = "individual" } = location.state || {};
+
+  const [playMode, setPlayMode] = useState<PlayMode>(defaultPlayMode);
   const [subMode, setSubMode] = useState<SubMode>("test");
   const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>([]);
   const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([
@@ -72,9 +75,7 @@ export default function QuizConfigPage() {
     if (!user) return;
     const fetchMyPapers = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/api/papers/user/${user._id}`,
-        );
+        const res = await fetch(`${API_URL}/api/papers/user/${user._id}`);
         const data = await res.json();
         if (data.success) {
           const topicPapers = data.data.filter(
@@ -158,6 +159,7 @@ export default function QuizConfigPage() {
       return "Select at least one chapter";
     return "Enter Fullscreen & Launch";
   };
+
   const handleLaunch = async () => {
     if (!user) return;
     setErrorMsg("");
@@ -173,38 +175,32 @@ export default function QuizConfigPage() {
       let finalQuestions = [];
 
       if (questionSource === "previous") {
-        const res = await fetch(
-          `${API_URL}/api/papers/${selectedPaperId}`,
-        );
+        const res = await fetch(`${API_URL}/api/papers/${selectedPaperId}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
         finalQuestions = data.data.questions;
       } else {
-        const res = await fetch(
-          `${API_URL}/api/quiz/generate-quiz`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: user._id,
-              topicId,
-              subTopics: selectedSubTopics,
-              difficulty: selectedDifficulties,
-              limit: questionCount,
-              subMode,
-              questionType:
-                subMode === "revision" ? selectedQuestionTypes : undefined,
-            }),
-          },
-        );
+        const res = await fetch(`${API_URL}/api/quiz/generate-quiz`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user._id,
+            topicId,
+            subTopics: selectedSubTopics,
+            difficulty: selectedDifficulties,
+            limit: questionCount,
+            subMode,
+            questionType:
+              subMode === "revision" ? selectedQuestionTypes : undefined,
+          }),
+        });
         const data = await res.json();
 
-        if (!data.success) {
-          throw new Error(data.message);
-        }
+        if (!data.success) throw new Error(data.message);
         finalQuestions = data.data;
       }
-      let roomCode = null;
+
+      let newRoomCode = null;
 
       if (playMode === "multi") {
         const roomRes = await fetch(`${API_URL}/api/rooms/create`, {
@@ -217,7 +213,8 @@ export default function QuizConfigPage() {
           }),
         });
         const roomData = await roomRes.json();
-        if (roomData.success) roomCode = roomData.data.code;
+        if (!roomData.success) throw new Error(roomData.message);
+        newRoomCode = roomData.data.code;
       }
 
       navigate(`/lobby/${topicId}`, {
@@ -231,11 +228,12 @@ export default function QuizConfigPage() {
           isAllTopics: isAllSelected,
           customPaperId: questionSource === "previous" ? selectedPaperId : null,
           generatedQuestions: finalQuestions,
-          roomCode,
+          roomCode: newRoomCode,
+          role: "host", // <-- CRITICAL FIX: Explicitly set the host role here!
         },
       });
     } catch (err: any) {
-      if (document.fullscreenElement) document.exitFullscreen();
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       setErrorMsg(err.message || "Failed to generate paper.");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
@@ -245,7 +243,8 @@ export default function QuizConfigPage() {
 
   if (!topicInfo)
     return (
-      <div className="p-8 font-bold text-slate-500 text-center">
+      <div className="p-8 font-bold text-slate-500 text-center flex flex-col items-center gap-2 mt-10">
+        <Loader2 className="animate-spin text-blue-500" size={32} />
         Loading Configuration...
       </div>
     );
@@ -277,7 +276,10 @@ export default function QuizConfigPage() {
             exit={{ opacity: 0 }}
             className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 font-bold rounded-xl shadow-sm flex justify-between items-center"
           >
-            <span>{errorMsg}</span>
+            <div className="flex items-center gap-2">
+              <ShieldAlert size={18} />
+              <span>{errorMsg}</span>
+            </div>
             <button
               onClick={() => setErrorMsg("")}
               className="text-red-400 hover:text-red-700"
@@ -352,6 +354,8 @@ export default function QuizConfigPage() {
             </AnimatePresence>
           </div>
         </motion.div>
+
+        {/* Multi Mode */}
         <motion.div variants={fadeUp} className="w-full">
           <div
             onClick={() => setPlayMode("multi")}
@@ -682,11 +686,7 @@ export default function QuizConfigPage() {
             whileTap={!isLaunchDisabled && !isGenerating ? { scale: 0.98 } : {}}
             onClick={handleLaunch}
             disabled={isLaunchDisabled || isGenerating}
-            className={`w-full py-5 rounded-2xl font-bold text-lg md:text-xl flex items-center justify-center gap-3 transition-colors ${
-              isLaunchDisabled || isGenerating
-                ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
-                : "bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-xl shadow-blue-500/30"
-            }`}
+            className={`w-full py-5 rounded-2xl font-bold text-lg md:text-xl flex items-center justify-center gap-3 transition-colors ${isLaunchDisabled || isGenerating ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed" : "bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-xl shadow-blue-500/30"}`}
           >
             {isGenerating ? (
               <Loader2 className="animate-spin" size={24} />

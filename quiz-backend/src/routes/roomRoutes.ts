@@ -182,4 +182,43 @@ router.post('/:code/delete', async (req: Request, res: Response): Promise<void> 
   }
 });
 
+router.post('/leave/:code', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.body;
+    const room = await Room.findOne({ code: (req.params.code as string).toUpperCase() });
+    
+    if (!room) {
+      res.status(404).json({ success: false, message: 'Room not found' });
+      return;
+    }
+
+    // Remove the participant from the array
+    room.participants = room.participants.filter(
+      p => p.userId.toString() !== userId
+    ) as any;
+    
+    await room.save();
+    res.json({ success: true, data: room });
+  } catch (error: any) { 
+    res.status(500).json({ success: false, error: error.message }); 
+  }
+});
+
+router.post('/:code/host-offline', async (req: Request, res: Response) => {
+  try {
+    const code = (req.params.code as string).toUpperCase();
+    setTimeout(async () => {
+      const room = await Room.findOne({ code });
+      if (room && room.status === 'waiting') {
+        await Room.findOneAndDelete({ code });
+        console.log(`Room ${code} deleted after 15 mins of host inactivity.`);
+      }
+    }, 15 * 60 * 1000); 
+
+    res.json({ success: true, message: '15-minute disconnect timer started' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;

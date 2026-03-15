@@ -1,4 +1,4 @@
-import { useState, useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCohort } from "../context/CohortContext";
 import { useUser } from "../context/UserContext";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function PeerQuizPage() {
@@ -54,25 +55,32 @@ export default function PeerQuizPage() {
     const interval = setInterval(fetchActiveRooms, 10000);
     return () => clearInterval(interval);
   }, []);
+
   const enterFullScreen = () => {
     const elem = document.documentElement;
     if (elem.requestFullscreen) {
       elem.requestFullscreen().catch((err) => {
-        console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
+        console.warn(
+          `Error attempting to enable full-screen mode: ${err.message}`,
+        );
       });
     }
   };
+
   const handleJoinRoom = async (code: string) => {
     if (!code.trim() || !user) return;
     setIsJoining(true);
     setJoinError("");
 
     try {
-      const res = await fetch(`${API_URL}/api/rooms/join/${code.toUpperCase()}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user._id, name: user.name }),
-      });
+      const res = await fetch(
+        `${API_URL}/api/rooms/join/${code.toUpperCase()}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user._id, name: user.name }),
+        },
+      );
 
       const data = await res.json();
 
@@ -107,7 +115,8 @@ export default function PeerQuizPage() {
   const handleCreateRoom = () => {
     if (!selectedTopicId) return;
     navigate(`/config/${selectedTopicId}`, {
-      state: { defaultPlayMode: "multi" },
+      // FIX: Changed from defaultPlayMode to playMode to match the QuizConfigPage
+      state: { playMode: "multi" },
     });
   };
 
