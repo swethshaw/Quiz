@@ -41,72 +41,70 @@ export default function Dashboard() {
   const [topicProgress, setTopicProgress] = useState<any>({});
   const [streak, setStreak] = useState(0);
 
-  useEffect(() => {
-    refreshData();
-    setVisibleCount(4);
+useEffect(() => {
+  refreshData();
+  setVisibleCount(4);
 
-    if (!activeCohort || !user) return;
+  if (!activeCohort || !user) return;
 
-    const fetchDashboardData = async () => {
-      // 1. Fetch Leaderboard
-      try {
-        const leadRes = await fetch(
-          `${API_URL}/api/leaderboard/cohort/${encodeURIComponent(activeCohort)}`,
-        );
-        const leadData = await leadRes.json();
-        if (leadData.success) {
-          setLeaders(leadData.data); // Store full list to find user
-          const myRankObj = leadData.data.find((u: any) => u.id === user._id);
-          setUserRank(myRankObj ? myRankObj.rank : "Unranked");
+  const fetchDashboardData = async () => {
+    try {
+      // 1. Fire all requests simultaneously
+      const [leadRes, roomRes, actRes, dashRes] = await Promise.all([
+        fetch(`${API_URL}/api/leaderboard/cohort/${encodeURIComponent(activeCohort)}`),
+        fetch(`${API_URL}/api/rooms/active`),
+        fetch(`${API_URL}/api/results/activity/${user._id}`),
+        fetch(`${API_URL}/api/results/dashboard/${user._id}`)
+      ]);
+
+      // 2. Parse all JSON simultaneously
+      const [leadData, roomData, actData, dashData] = await Promise.all([
+        leadRes.json().catch(() => ({ success: false })),
+        roomRes.json().catch(() => ({ success: false })),
+        actRes.json().catch(() => ({ success: false })),
+        dashRes.json().catch(() => ({ success: false }))
+      ]);
+
+      // 3. Process Leaderboard Data
+      if (leadData?.success) {
+        setLeaders(leadData.data);
+        const myRankObj = leadData.data.find((u: any) => u.id === user._id);
+        setUserRank(myRankObj ? myRankObj.rank : "Unranked");
+      }
+
+      // 4. Process Active Rooms Data
+      if (roomData?.success) setActiveRooms(roomData.data);
+
+      // 5. Process Activity Data
+      if (actData?.success) {
+        const activityMap: Record<string, number> = {};
+        actData.data.forEach((day: any) => {
+          activityMap[day._id] = day.totalScore;
+        });
+        setActivityData(activityMap);
+
+        let currentStreak = 0;
+        const today = new Date();
+        for (let i = 0; i < 365; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          if (activityMap[dateStr] && activityMap[dateStr] > 0) currentStreak++;
+          else if (i > 0) break;
         }
-      } catch (err) {}
+        setStreak(currentStreak);
+      }
 
-      // 2. Fetch Active Rooms
-      try {
-        const roomRes = await fetch(`${API_URL}/api/rooms/active`);
-        const roomData = await roomRes.json();
-        if (roomData.success) setActiveRooms(roomData.data);
-      } catch (err) {}
+      // 6. Process Dashboard Progress Data
+      if (dashData?.success) setTopicProgress(dashData.data);
 
-      // 3. Fetch Activity
-      try {
-        const actRes = await fetch(
-          `${API_URL}/api/results/activity/${user._id}`,
-        );
-        const actData = await actRes.json();
-        if (actData.success) {
-          const activityMap: Record<string, number> = {};
-          actData.data.forEach((day: any) => {
-            activityMap[day._id] = day.totalScore;
-          });
-          setActivityData(activityMap);
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+    }
+  };
 
-          let currentStreak = 0;
-          const today = new Date();
-          for (let i = 0; i < 365; i++) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - i);
-            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            if (activityMap[dateStr] && activityMap[dateStr] > 0)
-              currentStreak++;
-            else if (i > 0) break;
-          }
-          setStreak(currentStreak);
-        }
-      } catch (err) {}
-
-      // 4. Fetch Progress
-      try {
-        const dashRes = await fetch(
-          `${API_URL}/api/results/dashboard/${user._id}`,
-        );
-        const dashData = await dashRes.json();
-        if (dashData.success) setTopicProgress(dashData.data);
-      } catch (err) {}
-    };
-
-    fetchDashboardData();
-  }, [refreshData, activeCohort, user]);
+  fetchDashboardData();
+}, [refreshData, activeCohort, user]);
 
   const displayTopics = useMemo(() => {
     return topicProgress[activeCohort]?.length > 0
