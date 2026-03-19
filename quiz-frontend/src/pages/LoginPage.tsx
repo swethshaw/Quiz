@@ -91,7 +91,7 @@ export default function LoginPage() {
   const handleFailedAttempt = (serverMessage: string) => {
     const newAttempts = failedAttempts + 1;
     setFailedAttempts(newAttempts);
-
+    console.warn(`Login failed: ${serverMessage}. Attempt ${newAttempts}/${MAX_FAILED_ATTEMPTS}`);
     if (newAttempts >= MAX_FAILED_ATTEMPTS) {
       setIsLockedOut(true);
       setLockoutTimer(LOCKOUT_DURATION_MS / 1000);
