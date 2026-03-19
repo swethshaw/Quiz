@@ -16,16 +16,13 @@ import {
 import { useUser } from "../context/UserContext";
 import { useNavigate } from "react-router";
 
-// Use environment variable
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function HelpCenterPage() {
   const navigate = useNavigate();
   const { user } = useUser();
-  
-  // States
   const [reportType, setReportType] = useState("question_error");
-  const [title, setTitle] = useState(""); // NEW STATE
+  const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -57,8 +54,8 @@ export default function HelpCenterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user._id,
-          userName: user.name, // Added: Required by backend
-          title: title.trim(), // Added: Required by backend
+          userName: user.name,
+          title: title.trim(),
           reportType: reportType,
           description: message.trim(),
         }),
@@ -100,7 +97,6 @@ export default function HelpCenterPage() {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Type Selector */}
             <div>
               <label className="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-3">What are you reporting?</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -109,8 +105,6 @@ export default function HelpCenterPage() {
                 <TypeBtn type="improvement" active={reportType} set={setReportType} icon={<Lightbulb size={20}/>} label="Improvement" color="green" />
               </div>
             </div>
-
-            {/* Title Input (NEW) */}
             <div>
               <label className="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">Issue Title</label>
               <div className="relative">
@@ -125,8 +119,6 @@ export default function HelpCenterPage() {
                 />
               </div>
             </div>
-
-            {/* Description Textarea */}
             <div>
               <label className="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">Description</label>
               <textarea
@@ -144,8 +136,6 @@ export default function HelpCenterPage() {
             </button>
           </form>
         </motion.div>
-
-        {/* Community Sidebar */}
         <div className="lg:col-span-5 space-y-6">
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-linear-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 md:p-8 shadow-xl text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10"><MessageSquare size={120} /></div>
@@ -165,9 +155,6 @@ export default function HelpCenterPage() {
     </div>
   );
 }
-
-// --- Internal Helper Components ---
-
 function TypeBtn({ type, active, set, icon, label, color }: any) {
   const isActive = active === type;
   const colors: any = {

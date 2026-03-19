@@ -17,8 +17,7 @@ import {
 import { useUser } from "../context/UserContext";
 import { io } from "socket.io-client";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-// Connect to the socket server
+const API_URL = import.meta.env.VITE_API_URL;
 const socket = io(API_URL);
 
 export default function ProctorDashboardPage() {
@@ -29,12 +28,8 @@ export default function ProctorDashboardPage() {
   const [participants, setParticipants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isEndingRef = useRef(false);
-
-  // Initial Fetch & Real-Time Socket Setup
   useEffect(() => {
     if (!user || !roomCode) return;
-
-    // 1. Fetch initial state once
     const fetchInitialData = async () => {
       try {
         const res = await fetch(`${API_URL}/api/rooms/${roomCode}`);
@@ -60,11 +55,7 @@ export default function ProctorDashboardPage() {
     };
 
     fetchInitialData();
-
-    // 2. Setup Socket Connection for Live Updates
     socket.emit("join_room", roomCode);
-
-    // Listen for live student updates (Warnings, Progress, Submissions)
     socket.on("update_proctor_view", (data: any) => {
       setParticipants((prev) => {
         const newParts = [...prev];
@@ -84,17 +75,12 @@ export default function ProctorDashboardPage() {
         return newParts;
       });
     });
-
-    // Cleanup listeners
     return () => {
       socket.off("update_proctor_view");
     };
   }, [roomCode, user]);
-
-  // Host Actions (Kick/Block/End) - Wrapped in useCallback for safe dependency usage
   const handleHostAction = useCallback(
     async (action: "kick" | "block" | "end", targetUserId?: string) => {
-      // 1. Optimistic UI Update
       if (action === "block" || action === "kick") {
         setParticipants((prev) =>
           prev.map((p) =>
@@ -110,7 +96,6 @@ export default function ProctorDashboardPage() {
       }
 
       try {
-        // 2. Update Database
         const res = await fetch(
           `${API_URL}/api/rooms/host-action/${roomCode}`,
           {
@@ -123,7 +108,6 @@ export default function ProctorDashboardPage() {
 
         if (action === "end" && data.success) {
           setRoomData(data.data);
-          // Sort final leaderboard locally since it ended
           setParticipants((prev) =>
             [...prev].sort(
               (a, b) =>
@@ -131,8 +115,6 @@ export default function ProctorDashboardPage() {
             ),
           );
         }
-
-        // 3. Emit Socket event to force immediate action on student's screen
         socket.emit("host_action", { roomCode, action, targetUserId });
       } catch (err) {
         console.error(`Failed to ${action} user`, err);
@@ -140,8 +122,6 @@ export default function ProctorDashboardPage() {
     },
     [roomCode],
   );
-
-  // AUTO-END QUIZ LOGIC: Automatically triggers if all users submit
   useEffect(() => {
     if (!roomData || isEndingRef.current || roomData.status === "finished")
       return;
@@ -149,8 +129,6 @@ export default function ProctorDashboardPage() {
     const stillActiveCount = participants.filter(
       (p) => p.status === "Joined" || p.status === "Playing",
     ).length;
-
-    // If there are participants, and none are active anymore, trigger end!
     if (
       participants.length > 0 &&
       stillActiveCount === 0 &&

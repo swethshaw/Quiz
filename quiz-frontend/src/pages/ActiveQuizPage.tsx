@@ -22,7 +22,7 @@ import { useUser } from "../context/UserContext";
 import { useCohort } from "../context/CohortContext";
 import { io } from "socket.io-client";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 const socket = io(API_URL);
 
 export default function ActiveQuizPage() {
@@ -127,8 +127,6 @@ export default function ActiveQuizPage() {
             timeSpentSeconds: timeSpent,
           }),
         });
-
-        // Notify host instantly
         socket.emit("participant_event", {
           roomCode: activeRoomCode,
           data: {
@@ -156,8 +154,6 @@ export default function ActiveQuizPage() {
     location.state,
     activeRoomCode,
   ]);
-
-  // --- Real-time Engine (Sockets + Fail-safe Polling) ---
   useEffect(() => {
     if (
       playMode !== "multi" ||
@@ -167,12 +163,9 @@ export default function ActiveQuizPage() {
       !user
     )
       return;
-
-    // 1. Join Socket for INSTANT kicks/blocks
     socket.emit("join_room", activeRoomCode);
 
     const handleForceAction = ({ action, targetUserId }: any) => {
-      // Wrapped in String() to prevent exact-match type bugs (ObjectId vs String)
       if (String(targetUserId) === String(user._id)) {
         if (action === "kick") {
           setHostAction({
@@ -195,8 +188,6 @@ export default function ActiveQuizPage() {
         msg: "The host has ended the quiz for everyone.",
       });
     });
-
-    // 2. Lightweight Fallback Poller (Catches events if socket drops during page load)
     const pollRoom = async () => {
       try {
         const res = await fetch(`${API_URL}/api/rooms/${activeRoomCode}`);
@@ -250,11 +241,8 @@ export default function ActiveQuizPage() {
     }, 3000);
     return () => clearTimeout(timer);
   }, [hostAction, navigate, submitQuiz]);
-
-  // Leaderboard fetcher for final screen
   useEffect(() => {
     if (!isFinished || playMode !== "multi" || !activeRoomCode) return;
-
     const fetchLeaderboard = async () => {
       try {
         const res = await fetch(`${API_URL}/api/rooms/${activeRoomCode}`);
@@ -313,8 +301,6 @@ export default function ActiveQuizPage() {
       document.removeEventListener("cut", blockClipboard);
     };
   }, [isFinished]);
-
-  // Tab switching warning logic
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && !isFinished) {
@@ -322,14 +308,11 @@ export default function ActiveQuizPage() {
           const next = w + 1;
 
           if (playMode === "multi" && activeRoomCode && user) {
-            // DB Backup
             fetch(`${API_URL}/api/rooms/warning/${activeRoomCode}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ userId: user._id }),
             }).catch(console.error);
-
-            // INSTANT Socket Notification
             socket.emit("participant_event", {
               roomCode: activeRoomCode,
               data: { userId: user._id, type: "warning", count: next },
@@ -398,8 +381,6 @@ export default function ActiveQuizPage() {
 
     setAnswers((prev) => {
       const newAnswers = { ...prev, [currentQuestionIndex]: optIndex };
-
-      // Calculate live score and emit to proctor instantly
       if (playMode === "multi" && activeRoomCode && user) {
         let liveScore = 0;
         questions.forEach((q, idx) => {
@@ -622,7 +603,6 @@ export default function ActiveQuizPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-teal-50/50 to-fuchsia-50/50 dark:from-slate-900 dark:to-slate-900 font-sans flex flex-col select-none">
-      {/* Notice Modal (z-[100] forces it to strictly sit above the quiz UI) */}
       <AnimatePresence>
         {hostAction && (
           <motion.div

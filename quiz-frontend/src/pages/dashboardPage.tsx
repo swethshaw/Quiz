@@ -22,11 +22,8 @@ import {
 import { useCohort } from "../context/CohortContext";
 import { useUser } from "../context/UserContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
-// ==========================================
-// MAIN DASHBOARD CONTAINER
-// ==========================================
 export default function Dashboard() {
   const navigate = useNavigate();
   const { activeCohort, cohortData, isLoading, refreshData } = useCohort();
@@ -41,70 +38,61 @@ export default function Dashboard() {
   const [topicProgress, setTopicProgress] = useState<any>({});
   const [streak, setStreak] = useState(0);
 
-useEffect(() => {
-  refreshData();
-  setVisibleCount(4);
+  useEffect(() => {
+    refreshData();
+    setVisibleCount(4);
 
-  if (!activeCohort || !user) return;
+    if (!activeCohort || !user) return;
 
-  const fetchDashboardData = async () => {
-    try {
-      // 1. Fire all requests simultaneously
-      const [leadRes, roomRes, actRes, dashRes] = await Promise.all([
-        fetch(`${API_URL}/api/leaderboard/cohort/${encodeURIComponent(activeCohort)}`),
-        fetch(`${API_URL}/api/rooms/active`),
-        fetch(`${API_URL}/api/results/activity/${user._id}`),
-        fetch(`${API_URL}/api/results/dashboard/${user._id}`)
-      ]);
-
-      // 2. Parse all JSON simultaneously
-      const [leadData, roomData, actData, dashData] = await Promise.all([
-        leadRes.json().catch(() => ({ success: false })),
-        roomRes.json().catch(() => ({ success: false })),
-        actRes.json().catch(() => ({ success: false })),
-        dashRes.json().catch(() => ({ success: false }))
-      ]);
-
-      // 3. Process Leaderboard Data
-      if (leadData?.success) {
-        setLeaders(leadData.data);
-        const myRankObj = leadData.data.find((u: any) => u.id === user._id);
-        setUserRank(myRankObj ? myRankObj.rank : "Unranked");
-      }
-
-      // 4. Process Active Rooms Data
-      if (roomData?.success) setActiveRooms(roomData.data);
-
-      // 5. Process Activity Data
-      if (actData?.success) {
-        const activityMap: Record<string, number> = {};
-        actData.data.forEach((day: any) => {
-          activityMap[day._id] = day.totalScore;
-        });
-        setActivityData(activityMap);
-
-        let currentStreak = 0;
-        const today = new Date();
-        for (let i = 0; i < 365; i++) {
-          const d = new Date(today);
-          d.setDate(d.getDate() - i);
-          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          if (activityMap[dateStr] && activityMap[dateStr] > 0) currentStreak++;
-          else if (i > 0) break;
+    const fetchDashboardData = async () => {
+      try {
+        const [leadRes, roomRes, actRes, dashRes] = await Promise.all([
+          fetch(
+            `${API_URL}/api/leaderboard/cohort/${encodeURIComponent(activeCohort)}`,
+          ),
+          fetch(`${API_URL}/api/rooms/active`),
+          fetch(`${API_URL}/api/results/activity/${user._id}`),
+          fetch(`${API_URL}/api/results/dashboard/${user._id}`),
+        ]);
+        const [leadData, roomData, actData, dashData] = await Promise.all([
+          leadRes.json().catch(() => ({ success: false })),
+          roomRes.json().catch(() => ({ success: false })),
+          actRes.json().catch(() => ({ success: false })),
+          dashRes.json().catch(() => ({ success: false })),
+        ]);
+        if (leadData?.success) {
+          setLeaders(leadData.data);
+          const myRankObj = leadData.data.find((u: any) => u.id === user._id);
+          setUserRank(myRankObj ? myRankObj.rank : "Unranked");
         }
-        setStreak(currentStreak);
+        if (roomData?.success) setActiveRooms(roomData.data);
+        if (actData?.success) {
+          const activityMap: Record<string, number> = {};
+          actData.data.forEach((day: any) => {
+            activityMap[day._id] = day.totalScore;
+          });
+          setActivityData(activityMap);
+
+          let currentStreak = 0;
+          const today = new Date();
+          for (let i = 0; i < 365; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            if (activityMap[dateStr] && activityMap[dateStr] > 0)
+              currentStreak++;
+            else if (i > 0) break;
+          }
+          setStreak(currentStreak);
+        }
+        if (dashData?.success) setTopicProgress(dashData.data);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
       }
+    };
 
-      // 6. Process Dashboard Progress Data
-      if (dashData?.success) setTopicProgress(dashData.data);
-
-    } catch (err) {
-      console.error("Dashboard fetch error:", err);
-    }
-  };
-
-  fetchDashboardData();
-}, [refreshData, activeCohort, user]);
+    fetchDashboardData();
+  }, [refreshData, activeCohort, user]);
 
   const displayTopics = useMemo(() => {
     return topicProgress[activeCohort]?.length > 0
@@ -160,7 +148,6 @@ useEffect(() => {
         <QuickStats stats={stats} userRank={userRank} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column */}
           <div className="lg:col-span-2 space-y-8">
             <HeatmapWidget activityData={activityData} />
             <TopicBreakdownWidget
@@ -171,8 +158,6 @@ useEffect(() => {
               navigate={navigate}
             />
           </div>
-
-          {/* Right Column */}
           <div className="space-y-8">
             <ActiveLobbiesWidget
               activeRooms={activeRooms}
@@ -190,11 +175,13 @@ useEffect(() => {
   );
 }
 
-// ==========================================
-// MODULAR COMPONENTS
-// ==========================================
-
-function WelcomeBanner({ user, streak, activeCohort, userRank, navigate }: any) {
+function WelcomeBanner({
+  user,
+  streak,
+  activeCohort,
+  userRank,
+  navigate,
+}: any) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -548,7 +535,8 @@ function TopicBreakdownWidget({
         {visibleTopics.length > 0 ? (
           <>
             {visibleTopics.map((topic: any) => {
-              const theoryWidth = topic.theoryCompleted || topic.isRead ? 100 : 0;
+              const theoryWidth =
+                topic.theoryCompleted || topic.isRead ? 100 : 0;
               const totalQ = topic.totalQuestions || 0;
               const solvedQ = topic.solvedQuestions || 0;
               const quizWidth =
@@ -576,7 +564,9 @@ function TopicBreakdownWidget({
                       <div className="flex justify-between text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">
                         <span>Theory Mastery</span>
                         <span
-                          className={theoryWidth === 100 ? "text-emerald-500" : ""}
+                          className={
+                            theoryWidth === 100 ? "text-emerald-500" : ""
+                          }
                         >
                           {theoryWidth}%
                         </span>
@@ -654,8 +644,8 @@ function ActiveLobbiesWidget({ activeRooms, navigate }: any) {
     >
       <div className="flex justify-between items-center mb-6">
         <h3 className="font-black text-xl text-slate-900 dark:text-white flex items-center gap-2">
-          <Zap className="text-amber-500" size={24} fill="currentColor" /> Active
-          Lobbies
+          <Zap className="text-amber-500" size={24} fill="currentColor" />{" "}
+          Active Lobbies
         </h3>
         {activeRooms.length > 0 && (
           <span className="flex h-3 w-3 relative">
@@ -714,7 +704,6 @@ function ActiveLobbiesWidget({ activeRooms, navigate }: any) {
 }
 
 function LeaderboardWidget({ leaders, user, navigate }: any) {
-  // Logic to show top 3, plus user's rank if not in top 3
   const top3 = leaders.slice(0, 3);
   const myRankObj = leaders.find((l: any) => l.id === user?._id);
   const amIInTop3 = top3.some((l: any) => l.id === user?._id);
@@ -778,8 +767,6 @@ function LeaderboardWidget({ leaders, user, navigate }: any) {
                 </div>
               );
             })}
-
-            {/* Display user at the bottom if they aren't in the top 3 */}
             {!amIInTop3 && myRankObj && (
               <>
                 <div className="flex justify-center py-1">

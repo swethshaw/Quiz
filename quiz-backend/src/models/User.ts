@@ -1,6 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-// 1. Updated Interface to match the Schema
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -21,15 +20,12 @@ export interface IUser extends Document {
   createdAt: Date;
 }
 
-// 2. Your updated Schema
 const userSchema: Schema = new Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   avatarColor: { type: String, default: 'bg-violet-500' },
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
-  
-  // New Optional Fields
   gender: { type: String },
   birthday: { type: Date },
   work: { type: String },

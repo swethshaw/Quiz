@@ -11,7 +11,6 @@ export default function Layout() {
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       
       <div className="lg:ml-72 flex flex-col min-h-screen">
-        {/* Mobile Header */}
         <div className="lg:hidden h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button 
@@ -23,8 +22,6 @@ export default function Layout() {
             <span className="font-black text-slate-900 dark:text-white">Peer Learning</span>
           </div>
         </div>
-
-        {/* Content Area */}
         <main className="flex-1 overflow-x-hidden">
           <Outlet />
         </main>

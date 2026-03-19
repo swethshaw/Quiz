@@ -22,7 +22,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useCohort } from "../context/CohortContext";
 import { useUser } from "../context/UserContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Sidebar({
   isOpen,
@@ -37,8 +37,6 @@ export default function Sidebar({
 
   const [openMenus, setOpenMenus] = useState({ lms: false, quiz: false });
   const [hasUnread, setHasUnread] = useState(false);
-
-  // --- Fetch Notification Status ---
   useEffect(() => {
     const checkUnreadNotifications = async () => {
       if (!user) return;
@@ -49,7 +47,6 @@ export default function Sidebar({
         const data = await res.json();
 
         if (data.success) {
-          // Check if any notification in the current cohort is unread
           const unreadExists = data.data.some(
             (n: any) => !n.isRead && n.cohort === activeCohort,
           );
@@ -61,7 +58,7 @@ export default function Sidebar({
     };
 
     checkUnreadNotifications();
-  }, [user, activeCohort]); 
+  }, [user, activeCohort]);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) => `
     flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold transition-all duration-200
@@ -74,7 +71,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile Overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
@@ -90,7 +86,6 @@ export default function Sidebar({
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
       >
-        {/* Brand Header */}
         <div className="h-20 flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
@@ -107,8 +102,6 @@ export default function Sidebar({
             <X size={20} />
           </button>
         </div>
-
-        {/* Navigation Content */}
         <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
           <div className="space-y-1">
             <p className="px-4 mb-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
@@ -118,8 +111,6 @@ export default function Sidebar({
               <LayoutDashboard size={20} /> Dashboard
             </NavLink>
           </div>
-
-          {/* LMS Section */}
           <div className="space-y-1">
             <button
               onClick={() => setOpenMenus((p) => ({ ...p, lms: !p.lms }))}
@@ -145,8 +136,6 @@ export default function Sidebar({
               </div>
             )}
           </div>
-
-          {/* Quiz Section */}
           <div className="space-y-1">
             <button
               onClick={() => setOpenMenus((p) => ({ ...p, quiz: !p.quiz }))}
@@ -166,14 +155,10 @@ export default function Sidebar({
               </div>
             )}
           </div>
-
-          {/* Social & Help */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800/60 space-y-1">
             <NavLink to="/leaderboard" className={navLinkClass}>
               <Trophy size={20} /> Leaderboard
             </NavLink>
-
-            {/* NOTIFICATION LINK */}
             <NavLink to="/notifications" className={navLinkClass}>
               <div className="flex items-center gap-3 flex-1">
                 <Bell size={20} /> Notifications
@@ -188,23 +173,22 @@ export default function Sidebar({
             </NavLink>
           </div>
         </nav>
-
-        {/* Footer Area */}
         <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 space-y-4">
-          {/* Profile Section */}
-          <NavLink to="/profile" className="flex items-center gap-3 p-2.5 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                <UserCircle size={24} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                  {user?.name || "Student"}
-                </p>
-              </div>
+          <NavLink
+            to="/profile"
+            className="flex items-center gap-3 p-2.5 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+          >
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <UserCircle size={24} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                {user?.name || "Student"}
+              </p>
+            </div>
           </NavLink>
 
           <div className="space-y-2.5">
-            {/* Cohort Select - Improved contrast */}
             <select
               value={activeCohort}
               onChange={(e) => setActiveCohort(e.target.value)}
@@ -216,8 +200,6 @@ export default function Sidebar({
                 </option>
               ))}
             </select>
-
-            {/* 3-State Theme Toggle */}
             <div className="flex bg-slate-200 dark:bg-slate-800 rounded-xl p-1 gap-1">
               <ThemeButton
                 active={theme === "light"}

@@ -7,7 +7,11 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
+
+const NAME_REGEX = /^[A-Za-z\s\-']{2,50}$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -20,13 +24,27 @@ export default function RegisterPage() {
   const { login } = useUser();
   const navigate = useNavigate();
 
+  const validateInputs = () => {
+    if (!NAME_REGEX.test(name.trim())) {
+      setErrorMsg("Name must be 2-50 characters and contain only valid letters.");
+      return false;
+    }
+    if (!EMAIL_REGEX.test(email.trim())) {
+      setErrorMsg("Please enter a valid email address.");
+      return false;
+    }
+    if (!PASSWORD_REGEX.test(password)) {
+      setErrorMsg("Password must be 8+ chars with an uppercase, lowercase, number, and special character.");
+      return false;
+    }
+    return true;
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !password) return;
-
+    if (!validateInputs()) return;
     setIsLoading(true);
     setErrorMsg("");
-
     try {
       const res = await fetch(`${API_URL}/api/users/register`, {
         method: "POST",
@@ -37,11 +55,8 @@ export default function RegisterPage() {
           password: password 
         }),
       });
-
       const data = await res.json();
-
       if (data.success) {
-        // Auto-login the user after successful registration
         login(data.data); 
         navigate("/"); 
       } else {
@@ -53,18 +68,13 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
-
   const handleGoogleSignup = () => {
     console.log("Initiating Google Sign Up...");
   };
-
   return (
     <div className="min-h-screen w-full bg-[#F4F7FE] dark:bg-[#0B0F19] flex items-center justify-center p-4 relative overflow-hidden">
-      
-      {/* Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-violet-500/20 dark:bg-violet-600/10 blur-[100px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-500/20 dark:bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
-
       <motion.div 
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -82,14 +92,12 @@ export default function RegisterPage() {
             Create an account to start peer learning.
           </p>
         </div>
-
         {errorMsg && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl flex items-center gap-2 text-sm text-red-600 dark:text-red-400 font-bold animate-pulse">
-            <AlertCircle size={16} />
-            {errorMsg}
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl flex items-start gap-2 text-sm text-red-600 dark:text-red-400 font-bold animate-in slide-in-from-top-2">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <p className="leading-tight">{errorMsg}</p>
           </div>
         )}
-
         <button 
           onClick={handleGoogleSignup}
           type="button"
@@ -103,15 +111,12 @@ export default function RegisterPage() {
           </svg>
           Sign up with Google
         </button>
-
         <div className="flex items-center my-6">
           <div className="flex-1 border-t border-slate-200 dark:border-slate-800"></div>
           <span className="px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Or Register With Email</span>
           <div className="flex-1 border-t border-slate-200 dark:border-slate-800"></div>
         </div>
-
         <form onSubmit={handleRegister} className="space-y-4">
-          
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">Full Name</label>
             <div className="relative group">
@@ -126,7 +131,6 @@ export default function RegisterPage() {
               />
             </div>
           </div>
-
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">Email Address</label>
             <div className="relative group">
@@ -141,7 +145,6 @@ export default function RegisterPage() {
               />
             </div>
           </div>
-
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">Create Password</label>
             <div className="relative group">
@@ -149,7 +152,6 @@ export default function RegisterPage() {
               <input 
                 type={showPassword ? "text" : "password"} 
                 required
-                minLength={6}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setErrorMsg(""); }}
                 placeholder="••••••••"
@@ -163,9 +165,8 @@ export default function RegisterPage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            <p className="text-[10px] text-slate-400 ml-1">Must be at least 6 characters.</p>
+            <p className="text-[10px] text-slate-400 ml-1">Requires 8+ chars, uppercase, lowercase, number, & special char.</p>
           </div>
-
           <button 
             type="submit"
             disabled={isLoading || !email || !password || !name}
@@ -178,14 +179,12 @@ export default function RegisterPage() {
             )}
           </button>
         </form>
-
         <p className="mt-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
           Already have an account?{" "}
           <Link to="/login" className="font-bold text-violet-600 dark:text-violet-400 hover:underline">
             Sign in
           </Link>
         </p>
-
       </motion.div>
     </div>
   );

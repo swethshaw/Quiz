@@ -26,7 +26,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     try {
       await Notification.create({
         userId,
-        cohort: cohort || 'General', // Fallback in case cohort isn't in req.body
+        cohort: cohort || 'General',
         type: 'quiz', 
         title: 'New Quiz Paper Created!',
         message: `Your paper "${title}" has been successfully configured and is ready.`,

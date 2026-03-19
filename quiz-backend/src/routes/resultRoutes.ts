@@ -1,5 +1,5 @@
 import express, { Request, Response, Router } from 'express';
-import mongoose from 'mongoose'; // <-- ADD THIS LINE
+import mongoose from 'mongoose';
 import Result from '../models/Result';
 import Notification from '../models/notification';
 
@@ -61,8 +61,6 @@ router.get('/user/:userId', async (req: Request, res: Response): Promise<void> =
 router.get('/activity/:userId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
-    
-    // Calculate the date 36 days ago
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - 36);
 
@@ -74,8 +72,7 @@ router.get('/activity/:userId', async (req: Request, res: Response): Promise<voi
         } 
       },
       { 
-        $group: { 
-          // Group by exact YYYY-MM-DD format
+        $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
           totalScore: { $sum: "$score" },
           quizzesTaken: { $sum: 1 }

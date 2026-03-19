@@ -18,7 +18,6 @@ export default function LobbyCountdown({
 }: LobbyCountdownProps) {
   return (
     <>
-      {/* Multi-Mode Fullscreen Starting Overlay */}
       <AnimatePresence>
         {lobbyStatus === "starting" && countdown !== null && playMode === "multi" && (
           <motion.div
@@ -41,8 +40,6 @@ export default function LobbyCountdown({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Solo Player Mode UI */}
       {playMode === "individual" && (
         <div className="text-center py-4 grow flex flex-col justify-center">
           <div className="relative w-40 h-40 mx-auto flex items-center justify-center mb-8">

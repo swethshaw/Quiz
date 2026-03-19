@@ -22,7 +22,6 @@ export default function LobbyDetailsPanel({
 }: LobbyDetailsPanelProps) {
   return (
     <div className="lg:col-span-7 space-y-6">
-      {/* Header & Stats Card */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -95,8 +94,6 @@ export default function LobbyDetailsPanel({
           </div>
         </div>
       </motion.div>
-
-      {/* Rules & Instructions */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

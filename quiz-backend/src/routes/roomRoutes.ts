@@ -192,7 +192,6 @@ router.post('/leave/:code', async (req: Request, res: Response) => {
       return;
     }
 
-    // Remove the participant from the array
     room.participants = room.participants.filter(
       p => p.userId.toString() !== userId
     ) as any;

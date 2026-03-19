@@ -1,6 +1,6 @@
-import { motion, type Variants } from 'framer-motion';
-import { Code, CheckCircle2, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { motion, type Variants } from "framer-motion";
+import { Code, CheckCircle2, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 interface TopicCardProps {
   topic: {
     id: string;
@@ -12,28 +12,34 @@ interface TopicCardProps {
     solvedQuestions: number;
   };
 }
-const itemVariants: Variants = { 
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 300, damping: 24 },
+  },
 };
 
 export default function TopicCard({ topic }: TopicCardProps) {
   const navigate = useNavigate();
-  const progressPercentage = Math.round((topic.solvedQuestions / topic.totalQuestions) * 100);
+  const progressPercentage = Math.round(
+    (topic.solvedQuestions / topic.totalQuestions) * 100,
+  );
 
   return (
-    <motion.div 
+    <motion.div
       variants={itemVariants}
       whileHover={{ scale: 1.01, translateY: -4 }}
       transition={{ duration: 0.2 }}
       className="relative bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden mb-4 md:mb-6 group cursor-pointer"
       onClick={(e) => {
-      e.stopPropagation();
-      navigate(`/config/${topic.id}`);
-    }}
+        e.stopPropagation();
+        navigate(`/config/${topic.id}`);
+      }}
     >
       <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-blue-400 to-blue-600"></div>
-      
+
       <div className="p-5 md:p-8">
         <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
           <div className="shrink-0 flex sm:block justify-center sm:justify-start">
@@ -66,15 +72,16 @@ export default function TopicCard({ topic }: TopicCardProps) {
                 </span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 md:h-2.5 overflow-hidden">
-                <motion.div 
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progressPercentage}%` }}
                   transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-                  className="bg-blue-600 h-full rounded-full" 
+                  className="bg-blue-600 h-full rounded-full"
                 />
               </div>
               <p className="text-[10px] md:text-xs text-slate-500 mt-2 text-left">
-                {topic.solvedQuestions} of {topic.totalQuestions} questions solved
+                {topic.solvedQuestions} of {topic.totalQuestions} questions
+                solved
               </p>
             </div>
           </div>
@@ -86,8 +93,8 @@ export default function TopicCard({ topic }: TopicCardProps) {
           <CheckCircle2 size={16} className="md:w-4.5 md:h-4.5" />
           <span>Continue Quiz</span>
         </div>
-        <motion.div 
-          whileHover={{ x: 5 }} 
+        <motion.div
+          whileHover={{ x: 5 }}
           className="text-slate-400 group-hover:text-blue-500 transition-colors"
         >
           <ChevronRight size={18} className="md:w-5 md:h-5" />

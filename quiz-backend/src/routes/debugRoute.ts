@@ -34,12 +34,8 @@ router.get('/fix-topics-db', async (req: Request, res: Response) => {
   try {
     const allTopics = await Topic.find().lean();
     let updatedCount = 0;
-
-    // 2. Loop through them
     for (const t of allTopics) {
-      // Check if cohortId is a string
       if (typeof t.cohortId === 'string') {
-        // 3. Update the document in the database to be an ObjectId
         await Topic.updateOne(
           { _id: t._id },
           { $set: { cohortId: new mongoose.Types.ObjectId(t.cohortId) } }

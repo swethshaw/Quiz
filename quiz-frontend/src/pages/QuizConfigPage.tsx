@@ -40,7 +40,7 @@ const QUESTION_TYPE_OPTIONS = [
   "Answered Correct",
   "Skipped",
 ];
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function QuizConfigPage() {
   const { topicId } = useParams<{ topicId: string }>();
@@ -229,7 +229,7 @@ export default function QuizConfigPage() {
           customPaperId: questionSource === "previous" ? selectedPaperId : null,
           generatedQuestions: finalQuestions,
           roomCode: newRoomCode,
-          role: "host", // <-- CRITICAL FIX: Explicitly set the host role here!
+          role: "host",
         },
       });
     } catch (err: any) {
@@ -296,7 +296,6 @@ export default function QuizConfigPage() {
         variants={{ show: { transition: { staggerChildren: 0.1 } } }}
         className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 md:mb-10"
       >
-        {/* Individual Mode */}
         <motion.div variants={fadeUp} className="w-full">
           <div
             onClick={() => setPlayMode("individual")}
@@ -354,8 +353,6 @@ export default function QuizConfigPage() {
             </AnimatePresence>
           </div>
         </motion.div>
-
-        {/* Multi Mode */}
         <motion.div variants={fadeUp} className="w-full">
           <div
             onClick={() => setPlayMode("multi")}
@@ -414,7 +411,6 @@ export default function QuizConfigPage() {
           </div>
         </motion.div>
       </motion.div>
-
       <motion.div
         layout
         initial={{ opacity: 0, y: 20 }}
@@ -494,8 +490,6 @@ export default function QuizConfigPage() {
             )}
           </div>
         </div>
-
-        {/* Subject Display */}
         <div className="w-full">
           <label className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">
             <Layers size={16} /> Main Subject

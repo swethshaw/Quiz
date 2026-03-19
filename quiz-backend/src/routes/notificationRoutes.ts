@@ -3,10 +3,8 @@ import Notification from '../models/notification';
 
 const router: Router = express.Router();
 
-// --- 1. GET ALL NOTIFICATIONS FOR A USER ---
 router.get('/user/:userId', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Sort by newest first
     const notifications = await Notification.find({ userId: req.params.userId })
                                             .sort({ createdAt: -1 });
     res.json({ success: true, data: notifications });
@@ -15,8 +13,6 @@ router.get('/user/:userId', async (req: Request, res: Response): Promise<void> =
   }
 });
 
-// --- 2. CREATE A NEW NOTIFICATION ---
-// (You will call this internally from other backend controllers, e.g., when a quiz finishes)
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId, cohort, type, title, message } = req.body;
@@ -41,13 +37,12 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// --- 3. MARK SINGLE NOTIFICATION AS READ ---
 router.patch('/:id/read', async (req: Request, res: Response): Promise<void> => {
   try {
     const notification = await Notification.findByIdAndUpdate(
       req.params.id,
       { isRead: true },
-      { new: true } // Returns the updated document
+      { new: true }
     );
 
     if (!notification) {
@@ -61,7 +56,6 @@ router.patch('/:id/read', async (req: Request, res: Response): Promise<void> => 
   }
 });
 
-// --- 4. MARK ALL NOTIFICATIONS AS READ ---
 router.patch('/user/:userId/read-all', async (req: Request, res: Response): Promise<void> => {
   try {
     await Notification.updateMany(
@@ -75,7 +69,6 @@ router.patch('/user/:userId/read-all', async (req: Request, res: Response): Prom
   }
 });
 
-// --- 5. DELETE A NOTIFICATION ---
 router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const notification = await Notification.findByIdAndDelete(req.params.id);

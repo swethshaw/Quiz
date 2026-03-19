@@ -5,12 +5,9 @@ import NodeCache from 'node-cache';
 const cache = new NodeCache({ stdTTL: 300 });
 const router: Router = express.Router();
 
-// --- 1. GET GLOBAL PLATFORM RANKINGS ---
 router.get('/global', async (req: Request, res: Response): Promise<void> => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
-    
-    // 1. Check Cache First
     const cacheKey = `leaderboard_global_${limit}`;
     const cachedData = cache.get(cacheKey);
     if (cachedData) {
@@ -19,7 +16,6 @@ router.get('/global', async (req: Request, res: Response): Promise<void> => {
     }
 
     const leaderboard = await Result.aggregate([
-      // ... [YOUR EXISTING PIPELINE STAYS EXACTLY THE SAME] ...
       { 
         $match: { 
           $or: [
@@ -95,8 +91,6 @@ router.get('/global', async (req: Request, res: Response): Promise<void> => {
         }
       }
     ]);
-
-    // 2. Set Cache Before Returning
     cache.set(cacheKey, leaderboard);
     res.json({ success: true, data: leaderboard });
     
@@ -119,7 +113,6 @@ router.get('/cohort/:cohortName', async (req: Request, res: Response): Promise<v
 
 
     const leaderboard = await Result.aggregate([
-      // 1. Filter by Cohort AND exclude custom papers
       { 
         $match: { 
           cohort: cohortName,

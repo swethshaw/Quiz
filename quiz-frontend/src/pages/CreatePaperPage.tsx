@@ -15,7 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "../context/UserContext";
 import { useCohort } from "../context/CohortContext";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 export default function CreatePaperPage() {
   const navigate = useNavigate();
   const { topicId } = useParams();
@@ -125,7 +125,6 @@ export default function CreatePaperPage() {
 
   return (
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
           onClick={() => navigate(-1)}
@@ -315,8 +314,6 @@ export default function CreatePaperPage() {
             )}
           </div>
         </div>
-        
-        {/* RIGHT COLUMN - PAPER PREVIEW */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex-1 flex flex-col">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">

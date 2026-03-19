@@ -9,13 +9,13 @@ export interface IComment {
 
 export interface IHelpTicket extends Document {
   userId: mongoose.Types.ObjectId;
-  userName: string; // Added for easy display
-  title: string;    // Added
+  userName: string;
+  title: string;
   reportType: 'question_error' | 'website_bug' | 'improvement';
   description: string;
   status: 'pending' | 'reviewed' | 'resolved';
-  likes: mongoose.Types.ObjectId[]; // Store User IDs who liked
-  comments: IComment[];             // Nested comments array
+  likes: mongoose.Types.ObjectId[];
+  comments: IComment[];             
   createdAt: Date;
 }
 

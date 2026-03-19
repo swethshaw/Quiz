@@ -5,7 +5,7 @@ type ThemeMode = 'light' | 'dark' | 'system';
 interface ThemeContextType {
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
-  isDarkMode: boolean; // Derived value for UI styling
+  isDarkMode: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -36,8 +36,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     applyTheme();
-    
-    // Listen for system changes if mode is 'system'
     const handleChange = () => { if (theme === 'system') applyTheme(); };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);

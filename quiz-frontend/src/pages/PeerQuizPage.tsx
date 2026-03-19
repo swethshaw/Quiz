@@ -16,7 +16,7 @@ import {
 import { useCohort } from "../context/CohortContext";
 import { useUser } from "../context/UserContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function PeerQuizPage() {
   const navigate = useNavigate();
@@ -115,7 +115,6 @@ export default function PeerQuizPage() {
   const handleCreateRoom = () => {
     if (!selectedTopicId) return;
     navigate(`/config/${selectedTopicId}`, {
-      // FIX: Changed from defaultPlayMode to playMode to match the QuizConfigPage
       state: { playMode: "multi" },
     });
   };

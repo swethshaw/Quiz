@@ -5,15 +5,13 @@ import { motion } from "framer-motion";
 import { useCohort } from "../context/CohortContext";
 import { useUser } from "../context/UserContext";
 import { io } from "socket.io-client";
-
-// Import our new Modular Components
 import DisconnectModal from "../components/lobby/DisconnectModal";
 import LobbyDetailsPanel from "../components/lobby/LobbyDetailsPanel";
 import LobbyCountdown from "../components/lobby/LobbyCountdown";
 import HostLobbyPanel from "../components/lobby/HostLobbyPanel";
 import ParticipantLobbyPanel from "../components/lobby/ParticipantLobbyPanel";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 const socket = io(API_URL);
 type PlayMode = "individual" | "multi";
 
@@ -25,7 +23,6 @@ export default function QuizLobbyPage() {
   const { cohortData, activeCohort, isLoading } = useCohort();
   const currentTopics = cohortData[activeCohort] || [];
   const topicInfo = currentTopics.find((t) => t._id === topicId);
-
   const {
     playMode = "individual",
     subMode = "test",
@@ -37,31 +34,28 @@ export default function QuizLobbyPage() {
     roomCode = null,
     demoRoleOverride,
   } = location.state || {};
-
-  const urlCode = new URLSearchParams(location.search).get("join") || new URLSearchParams(location.search).get("code");
+  const urlCode =
+    new URLSearchParams(location.search).get("join") ||
+    new URLSearchParams(location.search).get("code");
   const activeRoomCode = roomCode || urlCode;
-
   const [isHost, setIsHost] = useState<boolean>(
-    location.state?.role === "host" || demoRoleOverride === "host"
+    location.state?.role === "host" || demoRoleOverride === "host",
   );
-
   const [isHostTakingQuiz, setIsHostTakingQuiz] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(
     playMode === "individual" ? 30 : null,
   );
-  const [lobbyStatus, setLobbyStatus] = useState<"waiting" | "starting">("waiting");
+  const [lobbyStatus, setLobbyStatus] = useState<"waiting" | "starting">(
+    "waiting",
+  );
   const [hasMultipleDisplays, setHasMultipleDisplays] = useState(false);
   const [liveParticipants, setLiveParticipants] = useState<any[]>([]);
   const [isKicked, setIsKicked] = useState(false);
   const [hostLeft, setHostLeft] = useState(false);
-
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-
   const isNavigatingToQuiz = useRef(false);
   const liveParticipantsRef = useRef<any[]>([]);
-  
-  // FIX: Create stable refs for unload logic so the effect doesn't constantly re-trigger
   const userRef = useRef(user);
   const activeRoomCodeRef = useRef(activeRoomCode);
   const isHostRef = useRef(isHost);
@@ -92,25 +86,22 @@ export default function QuizLobbyPage() {
     return () => window.removeEventListener("resize", checkDisplays);
   }, []);
 
-  // --- SMART UNLOAD & UNMOUNT LOGIC (FIXED) ---
-useEffect(() => {
+  useEffect(() => {
     const handleLeave = () => {
-      // Use refs to get the latest state without adding them to dependencies
       const currentCode = activeRoomCodeRef.current;
       const currentUser = userRef.current;
       const currentIsHost = isHostRef.current;
-
       if (!currentCode || isNavigatingToQuiz.current || !currentUser) return;
-
       if (currentIsHost) {
         const peersCount = liveParticipantsRef.current.filter(
           (p: any) => p.userId !== currentUser._id,
         ).length;
-
         if (peersCount === 0) {
           navigator.sendBeacon(`${API_URL}/api/rooms/${currentCode}/delete`);
         } else {
-          navigator.sendBeacon(`${API_URL}/api/rooms/${currentCode}/host-offline`);
+          navigator.sendBeacon(
+            `${API_URL}/api/rooms/${currentCode}/host-offline`,
+          );
         }
       } else {
         const blob = new Blob([JSON.stringify({ userId: currentUser._id })], {
@@ -119,17 +110,12 @@ useEffect(() => {
         navigator.sendBeacon(`${API_URL}/api/rooms/leave/${currentCode}`, blob);
       }
     };
-
-    // This ONLY fires when the user actually closes the tab or hits refresh
     window.addEventListener("beforeunload", handleLeave);
-
     return () => {
       window.removeEventListener("beforeunload", handleLeave);
-      // 🔥 CRITICAL FIX: We completely removed the handleLeave() call from here.
-      // React 18 Strict Mode can no longer trigger a ghost-delete on page load!
     };
   }, []);
-  // --- API / SOCKET / POLLING LOGIC ---
+
   useEffect(() => {
     if (!isHost && activeRoomCode && user) {
       fetch(`${API_URL}/api/rooms/join/${activeRoomCode}`, {
@@ -197,7 +183,7 @@ useEffect(() => {
 
         const room = data.data;
         const actualHostId = room.hostId?._id || room.hostId;
-        
+
         if (String(actualHostId) === String(user._id)) {
           if (!isHost) setIsHost(true);
         } else {
@@ -212,7 +198,9 @@ useEffect(() => {
         }
 
         if (!isHost && room.status !== "playing") {
-          const amIStillHere = room.participants.find((p: any) => p.userId === user._id);
+          const amIStillHere = room.participants.find(
+            (p: any) => p.userId === user._id,
+          );
           if (!amIStillHere) setIsKicked(true);
         }
       } catch (err) {
@@ -228,22 +216,31 @@ useEffect(() => {
   useEffect(() => {
     if (isKicked || hostLeft) setTimeout(() => navigate("/"), 3000);
   }, [isKicked, hostLeft, navigate]);
-
-  // --- ACTION HANDLERS ---
   const handleKickParticipant = async (targetUserId: string) => {
     await fetch(`${API_URL}/api/rooms/host-action/${activeRoomCode}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "kick", targetUserId }),
     });
-    socket.emit("host_action", { roomCode: activeRoomCode, action: "kick", targetUserId });
+    socket.emit("host_action", {
+      roomCode: activeRoomCode,
+      action: "kick",
+      targetUserId,
+    });
   };
 
   const handleDeleteRoom = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete this room? This will kick everyone out.")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this room? This will kick everyone out.",
+      )
+    )
+      return;
     isNavigatingToQuiz.current = true;
     try {
-      await fetch(`${API_URL}/api/rooms/${activeRoomCode}`, { method: "DELETE" });
+      await fetch(`${API_URL}/api/rooms/${activeRoomCode}`, {
+        method: "DELETE",
+      });
       navigate("/");
     } catch (err) {
       console.error("Failed to delete room:", err);
@@ -306,7 +303,9 @@ useEffect(() => {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/peer-quiz?join=${activeRoomCode}`);
+    navigator.clipboard.writeText(
+      `${window.location.origin}/peer-quiz?join=${activeRoomCode}`,
+    );
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -314,7 +313,7 @@ useEffect(() => {
   const handleEmail = () => {
     const subject = encodeURIComponent("Join my Quiz Session");
     const body = encodeURIComponent(
-      `Hey! Join my live quiz session.\n\nCode: ${activeRoomCode}\n\nLink: ${window.location.origin}/peer-quiz?join=${activeRoomCode}`
+      `Hey! Join my live quiz session.\n\nCode: ${activeRoomCode}\n\nLink: ${window.location.origin}/peer-quiz?join=${activeRoomCode}`,
     );
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -332,11 +331,20 @@ useEffect(() => {
       }
       return;
     }
-    const timerInterval = setInterval(() => setCountdown((p) => (p !== null ? p - 1 : null)), 1000);
+    const timerInterval = setInterval(
+      () => setCountdown((p) => (p !== null ? p - 1 : null)),
+      1000,
+    );
     return () => clearInterval(timerInterval);
-  }, [countdown, navigate, topicId, location.state, isHost, isHostTakingQuiz, activeRoomCode]);
-
-  // --- RENDER ---
+  }, [
+    countdown,
+    navigate,
+    topicId,
+    location.state,
+    isHost,
+    isHostTakingQuiz,
+    activeRoomCode,
+  ]);
   if (isLoading) {
     return (
       <div className="w-full h-screen flex flex-col items-center justify-center bg-[#F8FAFC] dark:bg-[#0B0F19]">
@@ -359,13 +367,8 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300">
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 relative">
-        
-        {/* Modals */}
         <DisconnectModal isKicked={isKicked} hostLeft={hostLeft} />
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Left Panel: Rules & Information */}
           <LobbyDetailsPanel
             topicInfo={topicInfo}
             subMode={subMode}
@@ -375,15 +378,12 @@ useEffect(() => {
             isAllTopics={isAllTopics}
             selectedSubTopics={selectedSubTopics}
           />
-
-          {/* Right Panel: Lobby & User Controls */}
           <div className="lg:col-span-5">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden min-h-125 flex flex-col"
             >
-              
               <LobbyCountdown
                 countdown={countdown}
                 lobbyStatus={lobbyStatus}
@@ -391,7 +391,6 @@ useEffect(() => {
                 hasMultipleDisplays={hasMultipleDisplays}
                 handleManualStart={handleManualStart}
               />
-
               {hasMultipleDisplays && (
                 <div className="bg-red-50 dark:bg-red-950/40 border-2 border-red-500 rounded-xl p-4 mb-6 text-center animate-pulse">
                   <MonitorOff size={32} className="mx-auto text-red-500 mb-2" />
@@ -403,7 +402,6 @@ useEffect(() => {
                   </p>
                 </div>
               )}
-
               {playMode === "multi" && isHost && (
                 <HostLobbyPanel
                   activeRoomCode={activeRoomCode as string}
@@ -422,7 +420,6 @@ useEffect(() => {
                   hasMultipleDisplays={hasMultipleDisplays}
                 />
               )}
-
               {playMode === "multi" && !isHost && (
                 <ParticipantLobbyPanel
                   liveParticipants={liveParticipants}
@@ -430,7 +427,6 @@ useEffect(() => {
                   handleParticipantLeave={handleParticipantLeave}
                 />
               )}
-
             </motion.div>
           </div>
         </div>

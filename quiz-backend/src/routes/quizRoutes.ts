@@ -10,8 +10,6 @@ const router: Router = express.Router();
 router.get('/dashboard/:userId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
-    
-    // Fetch base data concurrently
     const [cohorts, topics, userResults, questionCountsAgg] = await Promise.all([
       Cohort.find(),
       Topic.find(),
@@ -22,13 +20,10 @@ router.get('/dashboard/:userId', async (req: Request, res: Response): Promise<vo
           { customPaperId: null }
         ]
       }),
-      // Fetch all question counts grouped by topic in ONE query
       Question.aggregate([
         { $group: { _id: "$topicId", count: { $sum: 1 } } }
       ])
     ]);
-
-    // Create a fast lookup map for question counts
     const questionCountMap = new Map();
     questionCountsAgg.forEach(q => questionCountMap.set(q._id.toString(), q.count));
 
@@ -44,8 +39,6 @@ router.get('/dashboard/:userId', async (req: Request, res: Response): Promise<vo
 
     for (const topic of topics) {
       const topicIdStr = topic._id.toString();
-      
-      // Use the map instead of querying the DB
       const totalQuestions = questionCountMap.get(topicIdStr) || 0; 
       
       const topicResults = resultsByTopic[topicIdStr] || [];

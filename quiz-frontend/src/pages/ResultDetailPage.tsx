@@ -11,7 +11,7 @@ import {
   Timer,
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 export default function ResultDetailPage() {
   const { resultId } = useParams();
   const navigate = useNavigate();
@@ -257,7 +257,6 @@ export default function ResultDetailPage() {
 
               return (
                 <div key={qIndex} className="relative pl-10 md:pl-12">
-                  {/* Index Circle Indicator */}
                   <div
                     className={`absolute left-0 top-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm ${isQuestionCorrect ? "bg-green-500" : isSkipped ? "bg-slate-300 dark:bg-slate-600" : "bg-red-500"}`}
                   >
