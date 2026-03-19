@@ -16,6 +16,7 @@ import ParticipantLobbyPanel from "../components/lobby/ParticipantLobbyPanel";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const socket = io(API_URL);
 type PlayMode = "individual" | "multi";
+
 export default function QuizLobbyPage() {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
@@ -59,10 +60,18 @@ export default function QuizLobbyPage() {
 
   const isNavigatingToQuiz = useRef(false);
   const liveParticipantsRef = useRef<any[]>([]);
+  
+  // FIX: Create stable refs for unload logic so the effect doesn't constantly re-trigger
+  const userRef = useRef(user);
+  const activeRoomCodeRef = useRef(activeRoomCode);
+  const isHostRef = useRef(isHost);
 
   useEffect(() => {
     liveParticipantsRef.current = liveParticipants;
-  }, [liveParticipants]);
+    userRef.current = user;
+    activeRoomCodeRef.current = activeRoomCode;
+    isHostRef.current = isHost;
+  }, [liveParticipants, user, activeRoomCode, isHost]);
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
@@ -83,38 +92,43 @@ export default function QuizLobbyPage() {
     return () => window.removeEventListener("resize", checkDisplays);
   }, []);
 
-  // --- SMART UNLOAD & UNMOUNT LOGIC ---
-  useEffect(() => {
+  // --- SMART UNLOAD & UNMOUNT LOGIC (FIXED) ---
+useEffect(() => {
     const handleLeave = () => {
-      if (!activeRoomCode || isNavigatingToQuiz.current || !user) return;
+      // Use refs to get the latest state without adding them to dependencies
+      const currentCode = activeRoomCodeRef.current;
+      const currentUser = userRef.current;
+      const currentIsHost = isHostRef.current;
 
-      if (isHost) {
+      if (!currentCode || isNavigatingToQuiz.current || !currentUser) return;
+
+      if (currentIsHost) {
         const peersCount = liveParticipantsRef.current.filter(
-          (p: any) => p.userId !== user._id,
+          (p: any) => p.userId !== currentUser._id,
         ).length;
 
         if (peersCount === 0) {
-          navigator.sendBeacon(`${API_URL}/api/rooms/${activeRoomCode}/delete`);
+          navigator.sendBeacon(`${API_URL}/api/rooms/${currentCode}/delete`);
         } else {
-          navigator.sendBeacon(`${API_URL}/api/rooms/${activeRoomCode}/host-offline`);
+          navigator.sendBeacon(`${API_URL}/api/rooms/${currentCode}/host-offline`);
         }
       } else {
-        const blob = new Blob([JSON.stringify({ userId: user._id })], {
+        const blob = new Blob([JSON.stringify({ userId: currentUser._id })], {
           type: "application/json",
         });
-        navigator.sendBeacon(`${API_URL}/api/rooms/leave/${activeRoomCode}`, blob);
+        navigator.sendBeacon(`${API_URL}/api/rooms/leave/${currentCode}`, blob);
       }
     };
 
-    const handleUnload = () => handleLeave();
-    window.addEventListener("beforeunload", handleUnload);
+    // This ONLY fires when the user actually closes the tab or hits refresh
+    window.addEventListener("beforeunload", handleLeave);
 
     return () => {
-      window.removeEventListener("beforeunload", handleUnload);
-      if (!isNavigatingToQuiz.current) handleLeave();
+      window.removeEventListener("beforeunload", handleLeave);
+      // 🔥 CRITICAL FIX: We completely removed the handleLeave() call from here.
+      // React 18 Strict Mode can no longer trigger a ghost-delete on page load!
     };
-  }, [isHost, activeRoomCode, user]);
-
+  }, []);
   // --- API / SOCKET / POLLING LOGIC ---
   useEffect(() => {
     if (!isHost && activeRoomCode && user) {
@@ -298,7 +312,11 @@ export default function QuizLobbyPage() {
   };
 
   const handleEmail = () => {
-    window.open(`mailto:?subject=Join my Quiz Session&body=Hey! Join my live quiz session. Code: ${activeRoomCode} %0A%0A Link: ${window.location.origin}/peer-quiz?join=${activeRoomCode}`);
+    const subject = encodeURIComponent("Join my Quiz Session");
+    const body = encodeURIComponent(
+      `Hey! Join my live quiz session.\n\nCode: ${activeRoomCode}\n\nLink: ${window.location.origin}/peer-quiz?join=${activeRoomCode}`
+    );
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
   useEffect(() => {
