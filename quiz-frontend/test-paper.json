@@ -1,0 +1,35 @@
+[
+  {
+    "question": "Which of the following modules is not a built-in core module in Node.js?",
+    "options": [
+      "http",
+      "fs",
+      "mongoose",
+      "path"
+    ],
+    "correctAnswerIndex": 2,
+    "explanation": "Mongoose is a third-party ODM library for MongoDB, while http, fs, and path are built directly into Node.js."
+  },
+  {
+    "question": "What is the primary purpose of the Event Loop in Node.js?",
+    "options": [
+      "To handle multi-threading for CPU-intensive tasks",
+      "To perform non-blocking I/O operations",
+      "To parse JSON data structures",
+      "To manage database schemas"
+    ],
+    "correctAnswerIndex": 1,
+    "explanation": "The Event Loop allows Node.js to perform non-blocking I/O operations by offloading operations to the system kernel whenever possible."
+  },
+  {
+    "question": "Which HTTP status code represents a successful 'Created' response?",
+    "options": [
+      "200",
+      "201",
+      "204",
+      "400"
+    ],
+    "correctAnswerIndex": 1,
+    "explanation": "201 Created is the standard HTTP status code indicating that a request has succeeded and led to the creation of a resource."
+  }
+]
