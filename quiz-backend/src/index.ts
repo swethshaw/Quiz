@@ -22,7 +22,7 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:5173', 'https://quiz-six-swart-50.vercel.app'],
+    origin: ['http://localhost:5173', 'https://quiz-six-swart-50.vercel.app', 'https://peerlearning.ruppykhata.in'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true
   }
